@@ -1,0 +1,43 @@
+---
+import { MobileNav } from '@/components/mobile-nav';
+import { ThemeToggle } from '@/components/theme-toggle';
+
+const links = [
+    { href: '/projects', label: 'Projects' },
+    { href: '/blog', label: 'Writing' },
+    { href: '/about', label: 'About' },
+];
+
+const path = Astro.url.pathname;
+---
+
+<header class="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
+    <div class="container flex h-18 items-center justify-between gap-6">
+        <a href="/" class="font-display text-xl font-semibold tracking-tight">
+            Igor <span class="text-primary italic">Siergiej</span>
+        </a>
+        <nav aria-label="Primary" class="hidden items-center gap-7 text-sm sm:flex">
+            {
+                links.map((link) => (
+                    <a
+                        href={link.href}
+                        aria-current={path.startsWith(link.href) ? 'page' : undefined}
+                        class="border-b border-transparent pb-0.5 text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:border-primary aria-[current=page]:text-foreground"
+                    >
+                        {link.label}
+                    </a>
+                ))
+            }
+        </nav>
+        <div class="flex items-center gap-2">
+            <a
+                href="/cv.pdf"
+                class="hidden rounded-full border border-foreground px-4 py-2 text-sm transition-colors hover:border-primary hover:text-primary sm:inline-block"
+            >
+                Download CV
+            </a>
+            <ThemeToggle client:idle />
+            <MobileNav links={links} currentPath={path} client:idle />
+        </div>
+    </div>
+</header>

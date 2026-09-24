@@ -1,25 +1,22 @@
 import { Moon, Sun } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 
-function getInitialIsDark() {
-    if (typeof window === 'undefined') return false;
-    const stored = window.localStorage.getItem('theme');
-    if (stored) return stored === 'dark';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-}
-
+/**
+ * Renders both icons and lets the `dark` variant pick one, so the island's markup is
+ * identical on the server and on hydration — reading the stored theme during render
+ * produced a hydration mismatch whenever the resolved theme was dark. The pre-paint
+ * inline script in `Layout.astro` owns applying the class; this only flips it.
+ */
 export function ThemeToggle() {
-    const [isDark, setIsDark] = useState(getInitialIsDark);
-
-    useEffect(() => {
-        document.documentElement.classList.toggle('dark', isDark);
+    const toggle = () => {
+        const isDark = document.documentElement.classList.toggle('dark');
         window.localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    }, [isDark]);
+    };
 
     return (
-        <Button variant="ghost" size="icon" aria-label="Toggle theme" onClick={() => setIsDark((v) => !v)}>
-            {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+        <Button variant="ghost" size="icon" aria-label="Toggle theme" onClick={toggle}>
+            <Sun className="hidden size-4 dark:block" />
+            <Moon className="size-4 dark:hidden" />
         </Button>
     );
 }
