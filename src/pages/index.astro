@@ -1,8 +1,137 @@
 ---
-import Layout from '@/layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+import StackChips from '@/components/StackChips.astro';
 import { siteConfig } from '@/config/site';
+import Layout from '@/layouts/Layout.astro';
+import { featuredProjects, publishedPosts } from '@/lib/content';
+
+const projects = featuredProjects(await getCollection('projects')).slice(0, 4);
+const posts = publishedPosts(await getCollection('posts')).slice(0, 3);
+const formatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+const stack = [
+    { label: 'Frontend', items: 'React 19, Astro, Tailwind v4, Vite' },
+    { label: 'Backend', items: 'Hono, Koa, Bun, MongoDB, Postgres' },
+    { label: 'Infra', items: 'Terraform, AWS, Docker, Dokploy' },
+    { label: 'Quality', items: 'Vitest, Playwright, Biome, semantic-release' },
+];
 ---
 
-<Layout title={siteConfig.title} description={siteConfig.description}>
-    <h1 class="font-display text-5xl tracking-tight">Igor Siergiej</h1>
+<Layout title="Full-stack engineer" description={siteConfig.description} wide>
+    <section class="max-w-3xl">
+        <p class="font-mono text-xs tracking-widest text-primary uppercase">Full-stack engineer</p>
+        <h1 class="mt-6 font-display text-6xl leading-[1.02] tracking-tight">
+            I design, build and <span class="text-primary italic">run</span> the whole thing.
+        </h1>
+        <p class="mt-7 text-lg text-muted-foreground">
+            From React interfaces down to the Terraform that provisions them. Production TypeScript services, a
+            self-hosted cluster, zero click-ops — and a habit of writing down what I learn.
+        </p>
+        <div class="mt-9 flex flex-wrap gap-3">
+            <a
+                href="/projects"
+                class="rounded-full bg-foreground px-6 py-3 text-sm text-background transition-colors hover:bg-primary"
+            >
+                See selected work
+            </a>
+            <a
+                href="/blog"
+                class="rounded-full border border-border px-6 py-3 text-sm transition-colors hover:border-primary hover:text-primary"
+            >
+                Read the writing
+            </a>
+        </div>
+    </section>
+
+    <section class="mt-24">
+        <div class="flex items-baseline justify-between border-b border-border pb-4">
+            <h2 class="font-display text-2xl tracking-tight">Selected work</h2>
+            <a href="/projects" class="font-mono text-xs text-muted-foreground hover:text-primary">All projects →</a>
+        </div>
+        <ul>
+            {
+                projects.map((project) => (
+                    <li class="grid gap-4 border-b border-border py-6 md:grid-cols-[1fr_16rem]">
+                        <a href={`/projects/${project.id}/`} class="group">
+                            <h3 class="font-display text-xl transition-colors group-hover:text-primary">
+                                {project.data.title}
+                            </h3>
+                            <p class="mt-2 max-w-prose text-muted-foreground">{project.data.summary}</p>
+                        </a>
+                        <div class="md:justify-self-end">
+                            <StackChips items={project.data.stack} />
+                        </div>
+                    </li>
+                ))
+            }
+        </ul>
+    </section>
+
+    <section class="mt-20">
+        <div class="flex items-baseline justify-between border-b border-border pb-4">
+            <h2 class="font-display text-2xl tracking-tight">Writing</h2>
+            <a href="/blog" class="font-mono text-xs text-muted-foreground hover:text-primary">Archive · RSS →</a>
+        </div>
+        <ul>
+            {
+                posts.map((post) => (
+                    <li class="border-b border-border">
+                        <a href={`/blog/${post.id}/`} class="group grid grid-cols-[7rem_1fr] gap-5 py-4">
+                            <span class="font-mono text-xs text-muted-foreground">
+                                {post.data.publishDate ? (
+                                    <time datetime={post.data.publishDate.toISOString()}>
+                                        {formatter.format(post.data.publishDate)}
+                                    </time>
+                                ) : (
+                                    '—'
+                                )}
+                            </span>
+                            <span class="transition-colors group-hover:text-primary">{post.data.title}</span>
+                        </a>
+                    </li>
+                ))
+            }
+        </ul>
+    </section>
+
+    <section class="mt-20">
+        <h2 class="border-b border-border pb-4 font-display text-2xl tracking-tight">Stack</h2>
+        <dl class="mt-6 grid gap-5 sm:grid-cols-2">
+            {
+                stack.map((group) => (
+                    <div class="border-b border-dotted border-border pb-4">
+                        <dt class="font-mono text-[11px] tracking-widest text-muted-foreground uppercase">
+                            {group.label}
+                        </dt>
+                        <dd class="mt-1.5">{group.items}</dd>
+                    </div>
+                ))
+            }
+        </dl>
+    </section>
+
+    <section class="mt-24 text-center">
+        <h2 class="font-display text-4xl tracking-tight">Let's build something that stays up.</h2>
+        <p class="mt-4 text-muted-foreground">Open to senior full-stack and platform roles. Email is fastest.</p>
+        <div class="mt-8 flex flex-wrap justify-center gap-3">
+            <a
+                href={`mailto:${siteConfig.email}`}
+                class="rounded-full bg-foreground px-6 py-3 text-sm text-background transition-colors hover:bg-primary"
+            >
+                {siteConfig.email}
+            </a>
+            <a
+                href={siteConfig.social.github}
+                class="rounded-full border border-border px-6 py-3 text-sm transition-colors hover:border-primary"
+            >
+                GitHub
+            </a>
+            <a
+                href={siteConfig.social.linkedin}
+                class="rounded-full border border-border px-6 py-3 text-sm transition-colors hover:border-primary"
+            >
+                LinkedIn
+            </a>
+        </div>
+    </section>
 </Layout>
