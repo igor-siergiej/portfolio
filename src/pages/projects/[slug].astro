@@ -1,0 +1,71 @@
+---
+import { getCollection, getEntry, render } from 'astro:content';
+import JsonLd from '@/components/JsonLd.astro';
+import StackChips from '@/components/StackChips.astro';
+import { siteConfig } from '@/config/site';
+import Layout from '@/layouts/Layout.astro';
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+    const projects = await getCollection('projects');
+    return projects.map((project) => ({ params: { slug: project.id } }));
+}
+
+const { slug } = Astro.params;
+if (!slug) throw new Error('Slug not found');
+
+const project = await getEntry('projects', slug);
+if (!project) throw new Error(`No project found for slug: ${slug}`);
+
+const { Content } = await render(project);
+---
+
+<Layout title={`${project.data.title} — Igor Siergiej`} description={project.data.summary} image={project.data.cover}>
+    <JsonLd
+        schema={{
+            '@type': 'SoftwareApplication',
+            name: project.data.title,
+            description: project.data.summary,
+            applicationCategory: 'WebApplication',
+            author: { '@type': 'Person', name: siteConfig.name },
+            url: project.data.live ?? siteConfig.url,
+        }}
+    />
+    <article>
+        <p class="font-mono text-xs text-muted-foreground">{project.data.period} · {project.data.role}</p>
+        <h1 class="mt-4 font-display text-4xl leading-tight tracking-tight">{project.data.title}</h1>
+        <p class="mt-4 text-lg text-muted-foreground">{project.data.summary}</p>
+
+        <div class="mt-6"><StackChips items={project.data.stack} /></div>
+
+        <div class="mt-6 flex gap-4 font-mono text-xs">
+            {project.data.repo && <a class="text-primary hover:underline" href={project.data.repo}>Source ↗</a>}
+            {project.data.live && <a class="text-primary hover:underline" href={project.data.live}>Live ↗</a>}
+        </div>
+
+        {
+            project.data.screenshots.length > 0 && (
+                <div class="mt-10 grid gap-4">
+                    {project.data.screenshots.map((shot) => (
+                        <img
+                            src={shot}
+                            alt={`${project.data.title} screenshot`}
+                            loading="lazy"
+                            decoding="async"
+                            class="rounded-lg border border-border"
+                        />
+                    ))}
+                </div>
+            )
+        }
+
+        <div class="prose-content mt-12">
+            <Content />
+        </div>
+    </article>
+
+    <a href="/projects" class="mt-16 inline-block font-mono text-xs text-muted-foreground hover:text-primary">
+        ← All projects
+    </a>
+</Layout>
