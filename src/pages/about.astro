@@ -1,0 +1,70 @@
+---
+import { siteConfig } from '@/config/site';
+import Layout from '@/layouts/Layout.astro';
+
+const timeline = [
+    {
+        period: '2025 — present',
+        title: 'Platform of personal products',
+        body: 'Designed, built and operate eight services — shoppingo, jewellery-catalogue, kivo, a shared utils monorepo — on a self-hosted cluster and AWS, all deployed from pipelines.',
+    },
+    {
+        period: '2025',
+        title: 'Client work — Taisei Karate Academy',
+        body: 'Astro site on S3 + CloudFront with Origin Access Control, a Lambda/SES contact pipeline, CloudTrail and alarm-based monitoring, deployed through GitHub OIDC.',
+    },
+    {
+        period: '2023',
+        title: 'Graduate projects',
+        body: 'A JavaFX diet planner over a nutrition dataset, an Android language-learning app in Kotlin, and a browser-based SQL teaching tool that renders schemas as interactive trees.',
+    },
+];
+---
+
+<Layout title="About" description="Full-stack engineer — background, how I work, and what I'm looking for.">
+    <h1 class="font-display text-4xl tracking-tight">About</h1>
+
+    <div class="prose-content mt-8">
+        <p>
+            I'm a full-stack engineer happiest owning a feature from the first sketch to the production alarm. Most
+            of my work is TypeScript — React and Astro on the front, Hono and Bun on the back — but the part I enjoy
+            most is the seam between an application and the platform it runs on.
+        </p>
+        <p>
+            Everything I build is infrastructure-as-code: Terraform for AWS, Docker Compose for the homelab, GitHub
+            Actions with OIDC so there isn't a long-lived cloud key anywhere. If it can't be rebuilt from the repo,
+            it isn't finished.
+        </p>
+        <p>I'm currently open to senior full-stack and platform roles, UK-based or remote.</p>
+    </div>
+
+    <h2 class="mt-16 border-b border-border pb-4 font-display text-2xl tracking-tight">Timeline</h2>
+    <ul class="mt-6">
+        {
+            timeline.map((entry) => (
+                <li class="grid gap-3 border-b border-border py-6 md:grid-cols-[10rem_1fr]">
+                    <span class="font-mono text-xs text-muted-foreground">{entry.period}</span>
+                    <div>
+                        <h3 class="font-display text-lg">{entry.title}</h3>
+                        <p class="mt-1.5 text-muted-foreground">{entry.body}</p>
+                    </div>
+                </li>
+            ))
+        }
+    </ul>
+
+    <div class="mt-16 flex flex-wrap gap-3">
+        <a
+            href="/cv.pdf"
+            class="rounded-full bg-foreground px-6 py-3 text-sm text-background transition-colors hover:bg-primary"
+        >
+            Download CV
+        </a>
+        <a
+            href={`mailto:${siteConfig.email}`}
+            class="rounded-full border border-border px-6 py-3 text-sm transition-colors hover:border-primary"
+        >
+            Email me
+        </a>
+    </div>
+</Layout>
