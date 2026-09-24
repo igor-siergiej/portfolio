@@ -19,9 +19,10 @@ const project = await getEntry('projects', slug);
 if (!project) throw new Error(`No project found for slug: ${slug}`);
 
 const { Content } = await render(project);
+const pageUrl = new URL(Astro.url.pathname, siteConfig.url).toString();
 ---
 
-<Layout title={`${project.data.title} — Igor Siergiej`} description={project.data.summary} image={project.data.cover}>
+<Layout title={project.data.title} description={project.data.summary} image={project.data.cover}>
     <JsonLd
         schema={{
             '@type': 'SoftwareApplication',
@@ -29,7 +30,8 @@ const { Content } = await render(project);
             description: project.data.summary,
             applicationCategory: 'WebApplication',
             author: { '@type': 'Person', name: siteConfig.name },
-            url: project.data.live ?? siteConfig.url,
+            url: project.data.live ?? pageUrl,
+            codeRepository: project.data.repo,
         }}
     />
     <article>
@@ -39,10 +41,22 @@ const { Content } = await render(project);
 
         <div class="mt-6"><StackChips items={project.data.stack} /></div>
 
-        <div class="mt-6 flex gap-4 font-mono text-xs">
-            {project.data.repo && <a class="text-primary hover:underline" href={project.data.repo}>Source ↗</a>}
-            {project.data.live && <a class="text-primary hover:underline" href={project.data.live}>Live ↗</a>}
-        </div>
+        {
+            (project.data.repo || project.data.live) && (
+                <div class="mt-6 flex gap-4 font-mono text-xs">
+                    {project.data.repo && (
+                        <a class="text-primary hover:underline" href={project.data.repo}>
+                            Source ↗
+                        </a>
+                    )}
+                    {project.data.live && (
+                        <a class="text-primary hover:underline" href={project.data.live}>
+                            Live ↗
+                        </a>
+                    )}
+                </div>
+            )
+        }
 
         {
             project.data.screenshots.length > 0 && (
