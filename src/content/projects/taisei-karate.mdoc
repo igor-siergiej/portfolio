@@ -91,7 +91,8 @@ staging's auto-applying role must not be able to read it.
 Setting `environment:` on a job silently rewrites the token's `sub` claim to
 `repo:<repo>:environment:<name>`, so every `AssumeRoleWithWebIdentity` started
 failing with "Not authorized" until the policies matched. And because this repo
-was renamed, GitHub issues an *immutable*, ID-suffixed subject —
+was created after GitHub's 15 July 2026 cutover, it issues an *immutable*,
+ID-suffixed subject —
 `igor-siergiej@79415930/taisei-karate@1312344887` — so the plain `owner/repo`
 value fails every time. Both are now comments in `infra/` rather than folklore;
 the second is [written up in full](/blog/static-sites-without-click-ops/).
