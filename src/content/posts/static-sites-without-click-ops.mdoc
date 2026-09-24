@@ -223,6 +223,15 @@ variable "github_repo" {
 above already builds `"repo:${var.github_repo}:…"` — so drop `repo:` from what
 the API hands you.)
 
+That comment is also a small object lesson in its own right: its *explanation* is
+wrong. I wrote "this repo was renamed at some point" because a rename was the
+story I had in my head, and never checked it. One call to
+`gh api repos/igor-siergiej/taisei-karate --jq .created_at` returns
+`2026-07-25T22:29:48Z` — after the 15 July cutover — and the sub endpoint above
+reports `use_default: true`, so nothing was renamed and nothing was opted into.
+The workaround was right and the reason was invented. Write down the value you
+verified; be careful about writing down a cause you only assumed.
+
 ## While you're in there: `environment:` rewrites the subject too
 
 The same repository turned up a second version of the same bug, which is worth
