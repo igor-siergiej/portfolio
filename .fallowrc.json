@@ -1,0 +1,12 @@
+{
+  "ignorePatterns": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.integration.test.ts",
+    "**/dist/**",
+    "**/build/**",
+    "**/coverage/**"
+  ],
+  "ignoreUnresolvedImports": ["bun:test"],
+  "ignoreDependencies": []
+}

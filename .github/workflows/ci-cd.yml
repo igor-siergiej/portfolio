@@ -1,0 +1,164 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install
+      - run: bun run lint
+
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install
+      # getCollection('posts') etc. are typed from Astro's generated content types
+      # (.astro/types.d.ts), which only exist after a sync/dev/build — without this,
+      # tsc sees those as untyped and every field access becomes an implicit `any`.
+      - run: bunx astro sync
+      - run: bun run tsc --noEmit
+      - run: bun run test
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install
+      - run: bun run build
+        env:
+          # Without this, every canonical/OG/sitemap/RSS URL in the build falls back to
+          # http://localhost:4321 — silently wrong on every deployed page. Set via
+          # `gh variable set SITE_URL -b "https://your-domain"` (see infra/README.md).
+          SITE_URL: ${{ vars.SITE_URL }}
+      # Hand the bundle to deploy rather than making it rebuild the whole site a second
+      # time. deploy already gates on this job (needs: build), so rebuilding there bought
+      # no extra resilience — it just cost another ~2 minutes on every run.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: dist
+          retention-days: 1
+          include-hidden-files: false
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write
+      packages: read
+    env:
+      HUSKY: 0 # semantic-release's release commit must skip the commitlint hook
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install
+      - run: bunx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    concurrency:
+      group: deploy
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      # Ship exactly the bundle the `build` job already produced and verified. No
+      # checkout, no bun, no second build — this job only moves bytes to S3.
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: dist
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Upload hashed assets (immutable)
+        run: |
+          # Only content-hashed build output (_astro/*.js, *.css, fonts) is safe to cache
+          # forever — Astro's directory-format output means every page is its own
+          # index.html at a non-hashed path, so this must be scoped by --include, not by
+          # excluding a single root index.html (that pattern only ever matched the SPA's
+          # one HTML file, not Astro's per-route index.html/sitemap/rss/robots.txt).
+          aws s3 sync dist "s3://${{ vars.S3_BUCKET }}" \
+            --delete \
+            --exclude "*" \
+            --include "_astro/*" \
+            --cache-control "public, max-age=31536000, immutable"
+      - name: Upload editable images (short cache)
+        run: |
+          # Keystatic's media manager overwrites these in place (not content-hashed), so
+          # they cannot be cached immutably: a replaced photo must reach returning
+          # visitors well before a year. --delete is scoped to this prefix only, so it
+          # cannot remove anything the hashed-assets sync above just uploaded.
+          aws s3 sync dist/images "s3://${{ vars.S3_BUCKET }}/images" \
+            --delete \
+            --cache-control "public, max-age=3600"
+      - name: Upload everything else — pages, feeds, robots.txt (no-cache)
+        run: |
+          # Every page (including nested routes like /posts/first-post/index.html and
+          # /keystatic/index.html), sitemap-*.xml, rss.xml, robots.txt and favicon.svg —
+          # anything NOT content-hashed — must be revalidated on every request, or a
+          # CloudFront invalidation can't reach a visitor's browser cache.
+          aws s3 sync dist "s3://${{ vars.S3_BUCKET }}" \
+            --delete \
+            --exclude "_astro/*" \
+            --exclude "images/*" \
+            --cache-control "no-cache, no-store, must-revalidate"
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/*"

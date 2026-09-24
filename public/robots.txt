@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /keystatic
+
+Sitemap: __APP_SITE_URL__/sitemap-index.xml

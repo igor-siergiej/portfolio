@@ -1,0 +1,63 @@
+---
+import '../styles.css';
+import Seo from '@/components/Seo.astro';
+import JsonLd from '@/components/JsonLd.astro';
+import { siteConfig } from '@/config/site';
+
+export interface Props {
+    title: string;
+    description?: string;
+    image?: string;
+}
+
+const { title, description, image } = Astro.props;
+
+const orgSchema = siteConfig.business
+    ? {
+          '@type': siteConfig.business.type,
+          name: siteConfig.name,
+          url: siteConfig.url,
+          telephone: siteConfig.business.telephone,
+          address: {
+              '@type': 'PostalAddress',
+              ...siteConfig.business.address,
+          },
+          openingHours: siteConfig.business.openingHours,
+          ...(siteConfig.business.aggregateRating && {
+              aggregateRating: {
+                  '@type': 'AggregateRating',
+                  ratingValue: siteConfig.business.aggregateRating.ratingValue,
+                  reviewCount: siteConfig.business.aggregateRating.reviewCount,
+              },
+          }),
+      }
+    : { '@type': 'Organization', name: siteConfig.name, url: siteConfig.url };
+---
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="generator" content={Astro.generator} />
+		<script is:inline>
+			const stored = localStorage.getItem('theme');
+			const isDark = stored ? stored === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+			document.documentElement.classList.toggle('dark', isDark);
+		</script>
+		<Seo title={title} description={description} image={image} />
+		<JsonLd schema={orgSchema} />
+	</head>
+	<body>
+		<a
+			href="#main-content"
+			class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-foreground focus:outline focus:outline-2 focus:outline-ring"
+		>
+			Skip to content
+		</a>
+		<main id="main-content">
+			<slot />
+		</main>
+	</body>
+</html>

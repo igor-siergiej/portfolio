@@ -1,0 +1,34 @@
+---
+import Layout from '../layouts/Layout.astro';
+import JsonLd from '@/components/JsonLd.astro';
+import { siteConfig } from '@/config/site';
+import { Navbar } from '@/components/sections/Navbar';
+import { Hero } from '@/components/sections/Hero';
+import { Features } from '@/components/sections/Features';
+import { FAQ } from '@/components/sections/FAQ';
+import { Footer } from '@/components/sections/Footer';
+import { ScrollToTop } from '@/components/sections/ScrollToTop';
+
+export const prerender = true;
+---
+
+<Layout title={siteConfig.name} description={siteConfig.description}>
+  {siteConfig.faqs.length > 0 && (
+    <JsonLd
+      schema={{
+        '@type': 'FAQPage',
+        mainEntity: siteConfig.faqs.map((faq) => ({
+          '@type': 'Question',
+          name: faq.question,
+          acceptedAnswer: { '@type': 'Answer', text: faq.answer },
+        })),
+      }}
+    />
+  )}
+  <Navbar client:load />
+  <Hero />
+  <Features />
+  <FAQ client:load />
+  <Footer />
+  <ScrollToTop client:load />
+</Layout>

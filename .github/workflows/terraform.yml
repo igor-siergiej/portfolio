@@ -1,0 +1,127 @@
+name: Terraform
+
+on:
+  pull_request:
+    paths:
+      - 'infra/**'
+  push:
+    branches: [main]
+    paths:
+      - 'infra/**'
+
+jobs:
+  plan:
+    # GitHub's pull_request OIDC sub claim (repo:owner/repo:pull_request) can't
+    # distinguish a same-repo PR from a fork PR, so the trust policy alone can't exclude
+    # forks — this guard is the actual control keeping a fork PR's attacker-controlled
+    # infra/*.tf from ever reaching configure-aws-credentials with a real AWS role.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    concurrency:
+      group: terraform-plan-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_TERRAFORM_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.8
+          # The default wrapper always exits 0 and reports the real exit code via
+          # steps.<id>.outputs.exitcode instead of the step's own outcome — which broke
+          # the `continue-on-error`/`steps.plan.outcome` check below in production (a
+          # failing plan was reported as a passing job). Disabling it restores a normal
+          # process exit code so pipefail/outcome/apply-step-failure all work as expected.
+          terraform_wrapper: false
+      - run: terraform init -input=false
+        working-directory: infra
+      - name: Terraform plan
+        id: plan
+        working-directory: infra
+        continue-on-error: true
+        run: terraform plan -lock-timeout=5m -no-color -input=false | tee /tmp/plan.txt
+      - name: Post plan as PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('/tmp/plan.txt', 'utf8').slice(-60000);
+            const marker = '### Terraform plan';
+            const body = `${marker}\n\n<details><summary>Show plan</summary>\n\n\`\`\`\n${plan}\n\`\`\`\n\n</details>`;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            });
+            const existing = comments.find((c) => c.body.startsWith(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+      - name: Fail if plan failed
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+
+  apply:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: terraform-apply
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_TERRAFORM_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.8
+          # Same reason as the plan job: without this, a failing `terraform apply` step
+          # below would still report step success, silently masking a broken auto-apply.
+          terraform_wrapper: false
+      - run: terraform init -input=false
+        working-directory: infra
+      - run: terraform plan -out=tfplan -lock-timeout=5m -input=false
+        working-directory: infra
+      - run: terraform apply -auto-approve -lock-timeout=5m tfplan
+        working-directory: infra

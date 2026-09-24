@@ -1,0 +1,102 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: '*'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install
+      - run: bun run lint
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install
+      # getCollection('posts') etc. are typed from Astro's generated content types
+      # (.astro/types.d.ts), which only exist after a sync/dev/build — without this,
+      # tsc sees those as untyped and every field access becomes an implicit `any`.
+      - run: bunx astro sync
+      - run: bun run tsc --noEmit
+      - run: bun run test
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: lint
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install
+      - run: bunx playwright install --with-deps chromium
+      # dist/ must exist before `bun run preview` can serve it — playwright.config.ts's
+      # webServer doesn't build inline.
+      - run: bun run build
+      - run: bun run test:e2e
+        env:
+          CI: true
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  fallow:
+    runs-on: ubuntu-latest
+    needs: lint
+    permissions:
+      contents: read
+      pull-requests: write
+    # The published @fallow-cli/linux-x64-gnu packages (3.7.0/3.7.1) omit the fallow-lsp
+    # binary their own manifest lists, so the action's Ed25519/SHA-256 binary verification
+    # aborts before the audit runs. Skip that verification until upstream republishes a
+    # complete package — the `audit` command uses the main `fallow` binary, which is present.
+    env:
+      FALLOW_SKIP_BINARY_VERIFY: 1
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: fallow-rs/fallow@v2
+        with:
+          command: audit
+          comment: true
+          review-comments: true
+          gate: all
