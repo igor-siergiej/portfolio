@@ -1,0 +1,74 @@
+---
+title: diet-planner
+summary: JavaFX nutrition diary over a 2,887-food dataset, scoring a day's intake against age-, sex- and life-stage-specific reference targets.
+role: Solo — design and build
+period: 2021 — 2023
+stack: [Java, JavaFX, PostgreSQL, Gson, JUnit 5]
+repo: https://github.com/igor-siergiej/diet-planner
+status: archived
+---
+
+## Problem
+
+Calorie trackers count calories. They are much worse at the question that
+actually matters for a diet: am I short of anything? Micronutrient targets are
+not one number — they differ by sex, by age band, and by whether someone is
+pregnant or breastfeeding — and most tools either ignore them or flatten them to
+a single adult default.
+
+## Approach
+
+A desktop diary built on a real food-composition dataset. Log meals from the
+dataset, and the app totals every nutrient for the day and compares it against
+the reference intakes for that profile, including upper limits as well as
+targets.
+
+## Architecture
+
+JavaFX with FXML screens and a controller per screen, all extending a shared
+`BaseScreenController`.
+
+The nutrition data is 2,887 foods, each carrying up to 53 nutrients, loaded from
+JSON with Gson. Reference intakes are separate JSON files per cohort —
+`men14to18`, `men19to50`, `men50plus`, the corresponding women's bands,
+`pregnant`, `breastfeeding` — plus a `maximumDoses` file for upper limits.
+`DailyIntake` picks the right target set from the `Profile` (sex, birth date,
+activity level, pregnancy flags) rather than hard-coding one.
+
+The domain is `Profile` → `Diary` → `Entry`, where an entry is a `Meal` or a
+`Food`. Accounts and saved profiles live in PostgreSQL over JDBC; profiles are
+serialised to a JSON string in the `users` row. Passwords are salted and hashed
+before storage. A `GraphViewController` plots daily energy over time as a JavaFX
+`LineChart`.
+
+## Decisions and trade-offs
+
+**Reference intakes are data, not code.** Each cohort is its own JSON file that
+`DailyIntake` loads by name. Encoding the thresholds as `if (age > 50)` branches
+would have been fewer files and would have made every revision to a guideline a
+code change and a rebuild.
+
+**A profile is stored as a serialised document inside a relational row.** The
+`users` table holds `email`, `password`, `salt` and a `profiledata` string. This
+is the wrong answer for querying — there is no way to ask "which profiles are
+short on iron" without deserialising everything. It was the right answer for the
+app that existed, which only ever loads one profile at a time on login, and it
+kept the schema to a single table.
+
+**Screen navigation is an explicit undo/redo stack.** `UndoRedoStack` holds the
+screen history so back and forward are real operations rather than each
+controller knowing which screen preceded it. It made adding screens cheap; it
+also means the stack, not the controllers, owns a piece of state that is easy to
+get out of step.
+
+## Outcome
+
+Finished as a university-era project and archived; the last substantive work was
+in 2022. Eight JUnit 5 test classes cover the profile, diary, daily-intake,
+validation, meal and password-hashing logic; the eight screen controllers all
+extend one `BaseScreenController`.
+
+What I would do differently is obvious in hindsight and is the direct ancestor of
+how I build now: the JDBC calls are static methods called straight from
+controllers, so there is no seam to test or swap. Every app since puts a
+repository interface there.

@@ -1,0 +1,59 @@
+---
+title: database-visualiser
+summary: Browser teaching tool that parses CREATE TABLE DDL and draws the schema as a foreign-key tree, flagging structural mistakes in place.
+role: Solo — design and build
+period: '2023'
+stack: [JavaScript, Bootstrap 5, js-tokens, leader-line, Parcel, Mocha]
+repo: https://github.com/igor-siergiej/database-visualiser
+status: archived
+---
+
+## Problem
+
+SQL beginners can read a `CREATE TABLE` statement and still not see the shape of
+the schema it belongs to. The relationships are spread across foreign-key clauses
+in different statements, and "why is your schema like this?" is a question best
+answered with a picture.
+
+## Approach
+
+Paste DDL (or upload a `.sql` file); get back a drawn schema plus a list of
+problems. No account, no backend — it is a static bundle that does all its work
+in the browser.
+
+## Architecture
+
+Four stages. The DDL is tokenised with `js-tokens` and the token stream is walked
+into a domain model: `Database` → `Schema` → `Table` → `Column`, with
+`ForeignKey` and `ColumnType` attached. A `Validator` then walks the built model
+and raises `Problem` objects — `MissingPrimaryKeyProblem`, `NoForeignKeyProblem`,
+`MultipleRootsProblem` — each carrying a fix hint. Layout finds the root tables
+(the ones nothing points at), walks foreign keys recursively to assign each table
+a depth, and splits into separate trees when there is more than one root.
+Rendering draws table cards as Bootstrap markup positioned by depth, with
+`leader-line-new` drawing the connectors and redrawing them on drag and scroll.
+
+## Decisions and trade-offs
+
+**A hand-written token walk instead of a parser generator.** ANTLR with a real
+SQL grammar would handle far more DDL than this does. It would also have made
+the parsing step an opaque dependency, and understanding parsing was the point of
+the project. The subset it handles is small and the failure mode is explicit: an
+invalid construct throws a `SyntaxError` carrying the offending text, which the
+UI highlights in the textarea.
+
+**Validation lives in the constructors.** `Schema`, `Table`, `Column` and
+`ForeignKey` each enforce their own rules — valid name, no duplicates, known
+type — when they are constructed. An invalid schema therefore cannot be built at
+all, and the error messages fall out of the model rather than being assembled by
+a separate checking pass.
+
+**No framework.** The UI is written against the DOM API directly. For a project
+whose purpose was to understand rendering, bundling and parsing without
+abstraction in the way, a framework would have hidden the interesting half.
+
+## Outcome
+
+Finished and archived. Not currently deployed — `npm start` runs the whole thing
+locally, since there is no server component to host. The parser and model are
+covered by Mocha unit tests.

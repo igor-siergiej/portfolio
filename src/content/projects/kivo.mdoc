@@ -1,0 +1,83 @@
+---
+title: kivo
+summary: The shared authentication service behind the imapps apps — JWT issue, refresh-token rotation and a /verify endpoint other services call.
+role: Solo — design, build, operate
+period: 2025 — present
+stack: [Hono, Bun, MongoDB, TypeScript, jsonwebtoken, bcryptjs, Prometheus]
+repo: https://github.com/igor-siergiej/kivo
+status: active
+featured: 3
+---
+
+## Problem
+
+Once there is a second app, "who is this user?" stops being a question either app
+should answer on its own. shoppingo and jewellery-catalogue share the same
+people — the sharing features in shoppingo look users up by username — and
+duplicating registration, password hashing, token signing and session storage in
+both means two places to get session expiry wrong and two secrets to rotate in
+lockstep. That duplication was real, not hypothetical: shoppingo carried its own
+login, register and auth-context components until they were deleted in September
+2025 in favour of kivo plus a shared client.
+
+## Approach
+
+Pull authentication out into one small service with no UI. It owns registration
+and login, issues a short-lived access token plus an httpOnly refresh cookie, and
+exposes `/verify` so a consuming API can turn a bearer token into a user id
+without knowing anything about how it was signed. `/search` and `/users` let the
+consuming apps resolve usernames for their sharing features. `/health` and
+`/metrics` make it observable from the host's Gatus and Prometheus stacks.
+
+## Architecture
+
+Hono on Bun, TypeScript, MongoDB via the native driver. One directory per
+endpoint under `src/routes/` — `login`, `register`, `refresh`, `verify`,
+`logout`, `search`, `users` — with the shared plumbing (config validation, DI
+container, structured logging, Mongo connection) coming from
+[`@imapps/api-utils`](/projects/utils/) rather than being written again here.
+That is deliberate: this repo should be almost nothing but the auth logic.
+
+Middleware runs as a fixed stack: CORS allow-list → request logging →
+Cloudflare header handling → security headers → an in-memory rate limiter that
+skips `/health` and `/metrics` → Prometheus request metrics.
+
+Sessions are their own MongoDB collection. Only the SHA-256 hash of a refresh
+token is stored, and a TTL index on `createdAt` (30 days) expires stale rows
+with no cron job anywhere.
+
+## Decisions and trade-offs
+
+**Rotate the refresh token on every use, and store only its hash.** `/refresh`
+verifies the JWT, checks its `aud: "kivo"` claim, looks the hash up in
+`sessions`, then signs a *new* pair, inserts the new session row and deletes the
+old one. The simpler design — a long-lived refresh token checked only by
+signature — is stateless and needs no database, but it also cannot be revoked
+and leaks permanently if it leaks at all. Here the access token stays short and
+stateless while the refresh token is the revocable thing; `/logout` deletes the
+session so the cookie is dead on arrival. Storing the hash rather than the token
+means a database dump is not a set of live sessions.
+
+**A service, not a shared library.** A library would have avoided a network hop
+on every authorised request, which is the real cost of this design. But a
+library is copied into each app's process with each app's own copy of the
+session collection and its own deploy cadence — so "revoke this session" and
+"rotate the signing secret" become N-app operations. One `/verify` hop buys one
+place where sessions exist.
+
+**Rate limiting is in-memory, and that is a bounded bet.** kivo runs as a single
+instance, so a Redis-backed limiter would be infrastructure bought for a scale
+that does not exist. It is a middleware function with a narrow surface; if this
+ever runs as more than one replica, the limiter is the thing that gets swapped,
+not the thing that has to be untangled.
+
+## Outcome
+
+Runs on the self-hosted Dokploy host as an internal service, monitored by Gatus
+against `/health` and scraped by Prometheus. shoppingo and jewellery-catalogue
+both authenticate through it; both also ship a local `mock-auth-server` so their
+development loop does not depend on it being up.
+
+The obvious next step is that the in-memory rate limiter and the single instance
+are the same assumption wearing two hats — the first time this needs a second
+replica, both have to change together.

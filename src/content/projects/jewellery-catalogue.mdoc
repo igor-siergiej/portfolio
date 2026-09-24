@@ -1,0 +1,94 @@
+---
+title: jewellery-catalogue
+summary: Catalogue, costing and stock manager for a handmade-jewellery business, with two-way Etsy listing sync.
+role: Solo — design, build, operate
+period: 2025 — present
+stack: [React 19, Hono, Bun, MongoDB, MinIO, Etsy API, Playwright, Dokploy]
+repo: https://github.com/igor-siergiej/jewellery-catalogue
+live: https://jewellery-catalogue.imapps.uk
+status: active
+featured: 1
+---
+
+## Problem
+
+A handmade-jewellery business runs on a number nobody keeps accurately: what a
+piece actually cost to make. The inputs are beads, wire, chain and findings, each
+bought in packs and priced per bead, per metre or per pack, each restocked at a
+different price. Every design is a different combination of them, and most
+designs have variants. Meanwhile the shop front — Etsy — holds its own copy of
+the same catalogue, with its own stock numbers, drifting away from the workshop's
+reality with every sale.
+
+## Approach
+
+Model the materials properly, derive everything else. A design is a list of
+required materials with quantities; its cost is computed from live material
+prices, not typed in. "Producing" a design draws material stock down and finished
+stock up, and refuses to proceed if a material would go negative. Etsy is a
+first-class but strictly bounded integration: import an existing listing into a
+design, push a design out as a draft listing, reconcile stock in either
+direction.
+
+## Architecture
+
+A Bun-workspace monorepo — `web`, `api`, and a `types` package that carries both
+the domain interfaces and the form models, so a React form and the handler that
+receives it cannot disagree about a field.
+
+`api` is Hono on Bun. Domain services (`DesignService`, `MaterialService`,
+`GoalService`, `TaskService`, `UserSettingsService`) sit over repository
+interfaces backed by a shared `MongoRepository` base; handlers and routes are the
+HTTP edge and `dependencies/` wires the container. Images live in MinIO.
+
+The Etsy integration is a cluster of its own: `EtsyConnectionService` owns the
+OAuth handshake with a dedicated `EtsyOAuthStateStore`, `EtsyClient` is the only
+thing that speaks HTTP to Etsy, and `EtsyPushService`, `EtsyReconcileService` and
+`EtsyStatusService` sit on top. Nothing in the design or material domain imports
+any of them.
+
+`web` is React 19 on Vite 7, with TanStack Query, React Router 7, Tailwind 4,
+Radix/shadcn, dnd-kit for the draggable task board and a TipTap editor for
+design descriptions.
+
+## Decisions and trade-offs
+
+**Cost is computed server-side in the domain, never in the UI.** The obvious
+shortcut is to multiply quantities by prices in the React component that displays
+them. It is also how two screens end up disagreeing about the price of the same
+design. `MaterialService` recalculates a design's `totalMaterialCosts` from its
+required materials whenever a material changes, including per-variant totals, so
+there is exactly one implementation of the arithmetic and it is unit-tested. The
+cost is that a price edit is a heavier write than it looks — it can touch every
+design that uses that material.
+
+**Restocking uses a weighted average, not the latest price.** When a material is
+topped up at a new pack price, the stored unit price becomes the blend of old and
+new stock rather than the price of the most recent purchase. Latest-price is
+simpler and was what I wrote first; it makes the cost of a piece jump because of
+a purchase that had nothing to do with it.
+
+**Etsy is a bounded context, and its failures are contained.** Every call to Etsy
+goes through the `Etsy*` services, and the OAuth handshake has its own state
+store so a failed connect cannot wedge anything else. Variation import is
+explicitly best-effort: a listing with no inventory record, or a token missing a
+scope, returns empty variations rather than failing the design creation that
+triggered it. A third-party outage should cost you the sync, not the catalogue.
+
+**Integration tests run against a real MongoDB.** The repository layer is thin
+but easy to get subtly wrong — query shape, index usage, `$set` vs. replace.
+Mocking the driver tests that I called the driver. `bun test:integration` starts
+a containerised Mongo via Compose and exercises it for real.
+
+## Outcome
+
+Runs at
+[jewellery-catalogue.imapps.uk](https://jewellery-catalogue.imapps.uk) on the
+same self-hosted Dokploy host as the rest of the platform. Every PR runs Biome,
+a type-check, the API unit suite, the containerised-Mongo integration suite,
+Playwright e2e and a `fallow` dead-code audit; merges to `main` cut a
+semantic-release version, publish images to Docker Hub and deploy.
+
+The part I would revisit is reconciliation direction. Today pushing and
+reconciling are separate deliberate actions, which is safe but means the two
+stock numbers can still be out of step between them.

@@ -1,0 +1,98 @@
+---
+title: foundry
+summary: The self-hosted platform the imapps products run on — Compose stacks in Git, Traefik ingress, split-horizon DNS and a Prometheus/Loki/Grafana monitoring plane.
+role: Solo — design, build, operate
+period: 2026 — present
+stack: [Docker Compose, Dokploy, Traefik, Cloudflare Tunnel, blocky, Prometheus, Loki, Grafana, Gatus, Tailscale]
+repo: https://github.com/igor-siergiej/foundry
+status: active
+featured: 2
+---
+
+## Problem
+
+One box ends up running everything: the apps, their databases, the object store,
+ingress, DNS, monitoring and a pile of household services. Dokploy will happily
+let you create each of those from its web UI, which puts the definition of a
+deployment in a database on that box. Nothing is reviewable, nothing has a
+history, and the first time the machine changes underneath you — this one was
+reinstalled bare-metal in August 2026, moving both its LAN and its tailnet
+address — there is no artefact to diff against reality.
+
+## Approach
+
+Every stack is a `docker-compose.yml` in this repository, deployed by Dokploy via
+Git Sync from GitHub `HEAD`. The dashboard becomes a deploy trigger and a log
+viewer, not a source of truth. The stacks that are the platform rather than a
+product — DNS, the shared MongoDB and MinIO, the monitoring plane, tailnet
+access — live here too, reviewed exactly like application code. Ingress itself
+(Traefik and the Cloudflare tunnel) stays Dokploy-managed, so the repo also
+carries the documentation for how a request actually reaches a container.
+
+## Architecture
+
+A single Docker host. No swarm, no Kubernetes. Fifteen Compose stacks; the seven
+that need to reach ingress or the shared data stores join a common
+`dokploy-network`, and the rest stay on their own bridge.
+
+**Ingress has two paths.** Remote traffic hits Cloudflare-proxied DNS for
+`*.imapps.uk`, passes a Cloudflare Access check, comes down an outbound-only
+Cloudflare tunnel and lands on Traefik, which routes by `Host()` rule. LAN and
+tailnet traffic instead resolves `imapps.uk` through **blocky**, this repo's own
+DNS stack, which answers with the host's LAN address and reaches Traefik
+directly. blocky also runs the StevenBlack adware+malware blocklists for every
+device on the network.
+
+**Shared data** — MongoDB and MinIO — are stacks here too, consumed by the app
+services container-to-container over `dokploy-network`. Most volumes are NFS
+mounts from the NAS.
+
+**Monitoring** is Prometheus with cAdvisor and node-exporter, Loki with promtail
+for logs, Grafana for dashboards and Gatus for black-box checks — nineteen
+endpoints covering the public sites, the internal APIs' `/health` routes, the
+databases over TCP, and the LAN gateway and NAS over ICMP.
+
+## Decisions and trade-offs
+
+**Compose in Git, even though Dokploy can create services from its UI.** Clicking
+a service into existence is faster exactly once. Everything after that — what
+changed, why, and whether the box can be rebuilt — needs the config in a
+repository. The trade-off is a real and non-obvious one: Dokploy deploys from
+GitHub `HEAD`, not from the working copy on the host, so a change that is not
+committed and pushed is a change that does not exist. That gotcha is documented
+at the top of the deploy section for exactly that reason.
+
+**Split-horizon DNS, with `1.1.1.1` as secondary, knowing what that costs.**
+Pointing LAN clients at the host directly removes the Cloudflare round trip and
+makes local traffic fast. The second-order effect is that Cloudflare Access is
+then a *remote-only* gate — on the LAN, each service's own login is the only
+protection. Handing out a public resolver as DHCP secondary compounds it: while
+blocky restarts, a client can fall through to `1.1.1.1`, get the proxied answer
+and see an Access prompt until the record's TTL expires. Both are accepted
+deliberately, and both are written down, because the alternative was no internet
+at all whenever the resolver was down.
+
+**Internal traffic uses container names, not hostnames.** Apps reach
+`mongodb:27017` and `minio:9000` directly rather than `mongodb.imapps.uk`. Those
+public names resolve, via blocky, to the host's LAN IP — so a DHCP lease change
+takes down every app at once. It did, in September 2026. The constraint this
+imposes is that any service needing the shared stores has to join
+`dokploy-network`, which is a much cheaper rule to remember.
+
+**No host ports.** In the July 2026 hardening pass every `ports:` publish was
+removed from the media and app stacks; Traefik routes to container ports over the
+internal network instead. MongoDB and MinIO still publish, but bound explicitly
+to the LAN and tailnet addresses rather than `0.0.0.0`.
+
+## Outcome
+
+Runs the whole platform: shoppingo, jewellery-catalogue and kivo, plus media and
+household services, monitoring and a password vault. The repo
+carries its own agent-oriented documentation — topology, deploy flow, service
+inventory and a gotchas checklist — and that doc has already caught itself
+drifting from reality once, when stale host IPs survived the bare-metal
+migration and were found by cross-checking the live Compose files.
+
+The biggest open risk is written down rather than solved: two volumes
+(`immich-pgdata` and `minio-data`) are on host disk with no NFS backing and no
+backup, so host disk loss is data loss.

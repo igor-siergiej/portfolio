@@ -1,14 +1,91 @@
 ---
 title: shoppingo
-summary: Recipe-first shared shopping list — plan meals, auto-generate the list, collaborate in real time.
+summary: Recipe-first shared shopping list — plan meals, auto-generate the list, and keep using it in a shop with no signal.
 role: Solo — design, build, operate
-period: 2025 — present
-stack: [React 19, Hono, MongoDB, Bun, Playwright, Dokploy]
+period: 2023 — present
+stack: [React 19, Hono, Bun, MongoDB, MinIO, IndexedDB, Playwright, Dokploy]
 repo: https://github.com/igor-siergiej/shoppingo
+live: https://shoppingo.imapps.uk
 status: active
 featured: 0
 ---
 
 ## Problem
 
-Placeholder — written in Task 8.
+Shared shopping lists fail in the two places they are actually used. The first is
+the planning table: you decide on meals for the week somewhere else — a recipe
+site, a note, a conversation — and then retype the ingredients into a list by
+hand. The second is the shop itself, where the aisles that need the list most are
+the ones with no usable mobile signal, and a list that needs a round-trip to
+render is a list you can't tick off.
+
+## Approach
+
+One app that accepts both entry points — add items directly, or pull a recipe in
+and push its ingredients onto a list — and treats the offline case as the normal
+case rather than an error path. Recipes can be typed, or imported by pasting a
+link: the page is fetched, an LLM extracts ingredients and method, and the result
+is always shown for editing before anything is saved. The web app installs as a
+PWA and registers an Android share target at `/share`, so sharing a recipe URL
+from a browser lands directly in the import flow.
+
+## Architecture
+
+A Bun-workspace monorepo with three packages: `web`, `api`, and a `types` package
+holding the interfaces both sides compile against.
+
+`web` is React 19 on Vite — Tailwind and Radix for UI, React Query for server
+state, react-hook-form with Zod for forms, and `vite-plugin-pwa` driving the
+service worker and manifest.
+
+`api` is Hono served by `Bun.serve`, laid out as domain / infrastructure /
+interfaces with a DI container in `dependencies/`. Domain services
+(`ListService`, `RecipeService`, `RecipeImportService`, `NotificationService`,
+`DailyReminderScheduler`) depend on repository interfaces; the concrete
+`Mongo*Repository` classes, the MinIO bucket store, the fal.ai LLM and image
+clients, and the `WebPushSender` all live behind those interfaces in
+`infrastructure/`. Images go to MinIO, everything else to MongoDB. The API also
+exposes `/api/metrics` for Prometheus, instrumented per route.
+
+Authentication is not in this repo. A separate service — [kivo](/projects/kivo/) —
+issues access and refresh tokens, and the web client retries once through a
+transparent refresh when a request comes back `401`.
+
+## Decisions and trade-offs
+
+**Offline writes are an outbox of intents, not a cached response.** The
+alternative — optimistic UI plus a retry on the in-flight request — dies the
+moment the tab is closed, which is exactly what happens when a phone goes in a
+pocket. Instead every mutation is recorded as a typed intent (`item.add`,
+`item.toggle`, `item.rename`, `item.quantity`, …) in an IndexedDB outbox. Reads
+fold the pending intents over whatever the server last returned, so the list you
+see is the list you'll get. On reconnect the drainer replays them in order, and
+deliberately *discards* — rather than retries — an intent that comes back `404`
+or `409`: the item was deleted or already changed by someone else, and replaying
+it would resurrect it. The cost is that this is last-writer-wins, not a CRDT;
+for a household shopping list that is the right amount of machinery.
+
+**Auth is its own service, not a module.** Several apps in this account share the
+same users, so token issuing and rotation belong in one place. The price is an
+extra network hop on every authorised request and a second service to deploy; the
+win is one place to reason about sessions and one secret to rotate.
+
+**The LLM is behind an explicit action, and its output is never trusted
+silently.** Recipe import is a deliberate "paste a link" step and the extracted
+ingredients are rendered into an editable form before save. Auto-importing on
+paste would have been fewer taps and would have quietly written model
+hallucinations into someone's shopping list.
+
+## Outcome
+
+Runs at [shoppingo.imapps.uk](https://shoppingo.imapps.uk) on a self-hosted
+Dokploy host, behind Traefik and a Cloudflare tunnel, sharing that host's
+MongoDB and MinIO over the internal Docker network. Every PR runs Biome, the API
+and web unit suites and a Playwright e2e run including visual regression;
+merges to `main` cut a semantic-release version, publish images and deploy.
+
+It began in late 2023 as a much smaller DynamoDB-backed prototype and was rebuilt
+from February 2025 onto the current MongoDB/Hono shape — the offline outbox and
+the recipe pipeline are all post-rebuild. The next thing I'd change is the
+conflict story: discarding a `409` is honest but silent, and the sync badge
+should say what it dropped.

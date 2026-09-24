@@ -3,9 +3,260 @@ title: Static sites on AWS without click-ops
 description: S3, CloudFront OAC and GitHub OIDC, wired end-to-end in Terraform.
 publishDate: 2026-09-20
 tags: [aws, terraform, astro]
-draft: true
+draft: false
 ---
 
-## Why bother
+There is a two-checkbox version of hosting a static site on AWS: turn on S3
+static website hosting, make the bucket public, point DNS at it. It works, it is
+fast to set up, and everything you might later want — HTTPS, a cache, security
+headers, a real 404, a deploy that isn't someone's laptop — is bolted on
+afterwards or not at all.
 
-Draft placeholder — replaced with the real post in Task 8.
+The version I keep building instead is a private bucket behind CloudFront, with
+GitHub Actions deploying through OIDC, and all of it in Terraform. Both this
+site's `infra/` and [taisei-karate](/projects/taisei-karate/)'s are this shape.
+Most of it is unremarkable once written down. One part is not — it is the kind
+of thing you only learn by having production stop working — so that part is at
+the end.
+
+## Why Origin Access Control beats a public bucket
+
+S3's website-hosting mode gives you directory indexes (`/about` → `/about/index.html`)
+for free, which is the one genuinely nice thing about it. The price is that the
+bucket is readable by anyone who knows its name. Your CloudFront distribution is
+then a suggestion: the origin is equally reachable directly, over plain HTTP,
+without your cache, your `Strict-Transport-Security` header, your
+`Content-Security-Policy`, or your redirect to HTTPS.
+
+Origin Access Control closes that. The bucket blocks all public access and its
+policy grants exactly one principal exactly one action:
+
+```hcl
+data "aws_iam_policy_document" "bucket" {
+  statement {
+    principals {
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
+    }
+    actions   = ["s3:GetObject"]
+    resources = ["${aws_s3_bucket.site.arn}/*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceArn"
+      values   = [aws_cloudfront_distribution.site.arn]
+    }
+  }
+}
+```
+
+The `SourceArn` condition matters as much as the principal. Without it you have
+granted *CloudFront* read access, not *your distribution* — anyone's
+distribution could be pointed at your bucket. With it, there is exactly one path
+to an object.
+
+CloudFront then signs each origin request with SigV4:
+
+```hcl
+resource "aws_cloudfront_origin_access_control" "site" {
+  name                              = "${var.project}-oac"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+```
+
+Two consequences are worth knowing before you commit to this.
+
+**You lose directory indexes.** S3's REST endpoint has no concept of them — a
+request for `/about` is a request for an object literally named `about`, which
+does not exist. A CloudFront Function on viewer-request puts them back:
+
+```js
+function handler(event) {
+    var request = event.request;
+    if (request.uri.endsWith('/')) {
+        request.uri += 'index.html';
+    } else if (!request.uri.includes('.')) {
+        request.uri += '/index.html';
+    }
+    return request;
+}
+```
+
+**A missing object comes back as 403, not 404.** The policy above grants
+`s3:GetObject` and nothing else — no `s3:ListBucket` — so S3 cannot tell you
+"not found" without also telling you what does exist, and returns "denied"
+instead. Map both codes to your 404 page and stop worrying about which one you
+got:
+
+```hcl
+custom_error_response {
+  error_code            = 403
+  response_code         = 404
+  response_page_path    = "/404.html"
+  error_caching_min_ttl = 0
+}
+```
+
+## Deploying with OIDC instead of an access key
+
+The other half of click-ops is a long-lived `AKIA…` key pasted into GitHub
+Secrets. GitHub Actions can federate with AWS directly: the job gets a
+short-lived OIDC token, STS exchanges it for temporary credentials, and no
+secret exists to leak or rotate.
+
+Register GitHub's issuer as an IAM identity provider, then write a trust policy
+that is narrow in three dimensions at once — issuer, audience, and subject:
+
+```hcl
+data "aws_iam_policy_document" "assume" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.github.arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringLike"
+      variable = "token.actions.githubusercontent.com:sub"
+      values   = ["repo:${var.github_repo}:ref:refs/heads/main"]
+    }
+  }
+}
+```
+
+The `sub` condition is the security boundary. Omit it and *any* GitHub
+repository in the world can assume your role. Scope it to one repo and one ref
+and only a workflow running on `main` in your repository can deploy.
+
+Keep the deploy role small, too. Uploading a static build needs three things:
+
+```hcl
+statement {
+  actions   = ["s3:ListBucket"]
+  resources = [aws_s3_bucket.site.arn]
+}
+
+statement {
+  actions   = ["s3:PutObject", "s3:DeleteObject"]
+  resources = ["${aws_s3_bucket.site.arn}/*"]
+}
+
+statement {
+  actions   = ["cloudfront:CreateInvalidation"]
+  resources = [aws_cloudfront_distribution.site.arn]
+}
+```
+
+Terraform itself needs far more than that — IAM, CloudFront, ACM, Route 53 — so
+it gets a second role. A deploy job should not be able to rewrite its own trust
+policy.
+
+## The subject claim is not always `owner/repo`
+
+Here is the part that will waste your afternoon.
+
+`repo:owner/name:ref:refs/heads/main` is what every tutorial shows, and it is
+what GitHub sends — unless your repository uses **immutable subject claims**.
+Those build the subject from GitHub's numeric owner and repository IDs as well
+as their current names, so a recycled namespace can never resurrect someone
+else's trust policy. Repositories created after 15 July 2026 get the format
+automatically, and so does any repository renamed or transferred after that
+date; existing repositories can opt in.
+
+The taisei-karate repository was renamed at some point, so the prefix its tokens
+actually carry is not `repo:igor-siergiej/taisei-karate` but:
+
+```
+repo:igor-siergiej@79415930/taisei-karate@1312344887
+```
+
+— owner login, `@`, owner ID; repository name, `@`, repository ID.
+
+
+The failure mode is unhelpful. The token is valid, the issuer matches, the
+audience matches — the `sub` condition simply doesn't, so
+`sts:AssumeRoleWithWebIdentity` fails with `Not authorized to perform
+sts:AssumeRoleWithWebIdentity`. Nothing in that message mentions repository
+names, and re-reading the trust policy tells you nothing because it looks
+exactly like the one in the documentation.
+
+You can ask GitHub what it will actually send:
+
+```bash
+gh api repos/OWNER/REPO/actions/oidc/customization/sub
+```
+
+```json
+{
+  "use_default": true,
+  "use_immutable_subject": true,
+  "sub_claim_prefix": "repo:igor-siergiej@79415930/taisei-karate@1312344887"
+}
+```
+
+`use_immutable_subject: true` is the tell. Feed that prefix into the trust
+policy instead of the repository name. Because this is now a fact about a
+repository rather than a cosmetic string, it is worth writing down where the
+next person will look:
+
+```hcl
+variable "github_repo" {
+  description = "GitHub's OIDC sub-claim prefix for the repo allowed to assume the deploy role. Normally 'owner/repo', but this repo was renamed at some point, so GitHub now issues tokens with an immutable, ID-suffixed subject instead (see `gh api repos/OWNER/REPO/actions/oidc/customization/sub` -> sub_claim_prefix) — using the plain name here would make every AssumeRoleWithWebIdentity call 'Not authorized'."
+  type        = string
+  default     = "igor-siergiej@79415930/taisei-karate@1312344887"
+}
+```
+
+(The variable holds the part after `repo:`, because the trust-policy document
+above already builds `"repo:${var.github_repo}:…"` — so drop `repo:` from what
+the API hands you.)
+
+## While you're in there: `environment:` rewrites the subject too
+
+The same repository turned up a second version of the same bug, which is worth
+knowing because it looks identical from the outside.
+
+Adding `environment: production` to a job does not just gate it behind an
+approval — it **replaces** the subject claim. Instead of
+`repo:<repo>:ref:refs/heads/main` the token carries
+`repo:<repo>:environment:production`. Every AWS-touching job in that repository
+started targeting a GitHub environment, and every one of them started failing
+with the same "Not authorized", diagnosed the same way: read the actual `sub`
+out of CloudTrail rather than guessing.
+
+So the trust policy lists the forms that are genuinely in use:
+
+```hcl
+values = [
+  "repo:${var.github_repo}:ref:refs/heads/main",
+  "repo:${var.github_repo}:environment:${local.gh_environment_name}",
+]
+```
+
+And for the Terraform role, which is also assumed from pull-request-triggered
+plan jobs, `repo:<repo>:pull_request` — a third shape that is not a ref at all.
+
+## The shape of the thing
+
+Put together: a private bucket, one distribution allowed to read it, a
+viewer-request function restoring directory indexes, 403 and 404 both landing on
+a real 404 page, and two OIDC roles — a narrow one that syncs the bucket and
+invalidates the cache, and a broader one that runs `terraform plan` on a pull
+request and `terraform apply` on merge. No stored AWS credentials, and nothing
+that only exists because somebody clicked it once.
+
+The one thing I would tell anyone starting this: when
+`AssumeRoleWithWebIdentity` says "Not authorized", do not re-read your trust
+policy. Go and find the `sub` claim that was actually presented — in CloudTrail,
+or from `gh api` — and compare the two strings. The bug is almost always that
+they differ in a way the documentation never mentions.
