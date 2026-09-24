@@ -18,7 +18,13 @@ const formatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'sho
                 <li class="border-t border-border">
                     <a href={`/blog/${post.id}/`} class="group grid grid-cols-[7rem_1fr_4rem] items-baseline gap-5 py-5">
                         <span class="font-mono text-xs text-muted-foreground">
-                            {post.data.publishDate ? formatter.format(post.data.publishDate) : '—'}
+                            {post.data.publishDate ? (
+                                <time datetime={post.data.publishDate.toISOString()}>
+                                    {formatter.format(post.data.publishDate)}
+                                </time>
+                            ) : (
+                                '—'
+                            )}
                         </span>
                         <span class="font-display text-xl transition-colors group-hover:text-primary">
                             {post.data.title}

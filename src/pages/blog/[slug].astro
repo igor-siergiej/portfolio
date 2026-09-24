@@ -22,6 +22,7 @@ if (!post) throw new Error(`No post found for slug: ${slug}`);
 const { Content } = await render(post);
 const readingMinutes = estimateReadingMinutes(post.body ?? '');
 const formatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+const publishedIso = post.data.publishDate?.toISOString();
 ---
 
 <Layout title={post.data.title} description={post.data.description} image={post.data.coverImage}>
@@ -31,13 +32,19 @@ const formatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'lon
             headline: post.data.title,
             description: post.data.description,
             image: post.data.coverImage ? new URL(post.data.coverImage, siteConfig.url).toString() : undefined,
-            datePublished: post.data.publishDate?.toISOString(),
+            datePublished: publishedIso,
             author: { '@type': 'Person', name: siteConfig.name },
         }}
     />
     <article>
         <p class="font-mono text-xs text-muted-foreground">
-            {post.data.publishDate ? formatter.format(post.data.publishDate) : 'Unpublished'} · {readingMinutes} min read
+            {
+                post.data.publishDate ? (
+                    <time datetime={publishedIso}>{formatter.format(post.data.publishDate)}</time>
+                ) : (
+                    'Unpublished'
+                )
+            } · {readingMinutes} min read
         </p>
         <h1 class="mt-4 font-display text-4xl leading-tight tracking-tight">{post.data.title}</h1>
         <div class="prose-content mt-10">
