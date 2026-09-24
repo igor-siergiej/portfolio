@@ -1,0 +1,50 @@
+---
+import { getCollection, getEntry, render } from 'astro:content';
+import JsonLd from '@/components/JsonLd.astro';
+import { siteConfig } from '@/config/site';
+import Layout from '@/layouts/Layout.astro';
+import { publishedPosts } from '@/lib/content';
+import { estimateReadingMinutes } from '@/lib/reading-time';
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+    const posts = publishedPosts(await getCollection('posts'));
+    return posts.map((post) => ({ params: { slug: post.id } }));
+}
+
+const { slug } = Astro.params;
+if (!slug) throw new Error('Slug not found');
+
+const post = await getEntry('posts', slug);
+if (!post) throw new Error(`No post found for slug: ${slug}`);
+
+const { Content } = await render(post);
+const readingMinutes = estimateReadingMinutes(post.body ?? '');
+const formatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+---
+
+<Layout title={post.data.title} description={post.data.description} image={post.data.coverImage}>
+    <JsonLd
+        schema={{
+            '@type': 'Article',
+            headline: post.data.title,
+            description: post.data.description,
+            image: post.data.coverImage ? new URL(post.data.coverImage, siteConfig.url).toString() : undefined,
+            datePublished: post.data.publishDate?.toISOString(),
+            author: { '@type': 'Person', name: siteConfig.name },
+        }}
+    />
+    <article>
+        <p class="font-mono text-xs text-muted-foreground">
+            {post.data.publishDate ? formatter.format(post.data.publishDate) : 'Unpublished'} · {readingMinutes} min read
+        </p>
+        <h1 class="mt-4 font-display text-4xl leading-tight tracking-tight">{post.data.title}</h1>
+        <div class="prose-content mt-10">
+            <Content />
+        </div>
+    </article>
+    <a href="/blog" class="mt-16 inline-block font-mono text-xs text-muted-foreground hover:text-primary">
+        ← All writing
+    </a>
+</Layout>
