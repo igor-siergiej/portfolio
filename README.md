@@ -1,6 +1,6 @@
 # Content Website Template
 
-Astro + Keystatic (Cloud storage) + Tailwind v4/shadcn scaffold for
+Astro + Tailwind v4/shadcn scaffold for
 SEO-optimised content/promo sites. Deploys to AWS (S3 + CloudFront) via
 Terraform + GitHub Actions, no backend server at runtime.
 
@@ -20,7 +20,7 @@ git init && git add -A && git commit -m "chore: scaffold from content-website-te
 |---------|--------|
 | Runtime / package manager | Bun |
 | Framework | Astro 7 (static output) |
-| Content / CMS | Keystatic, `storage: { kind: 'cloud' }` — admin at `/keystatic`, commits straight to GitHub, no backend |
+| Content | Markdoc files in `src/content/`, authored in-repo — no CMS, no backend |
 | UI | React 19 islands, Tailwind v4, shadcn (radix base, nova preset) |
 | Lint / format | Biome |
 | Hooks | Husky + lint-staged + commitlint (Conventional Commits) |
@@ -42,12 +42,10 @@ bun run test:e2e       # playwright
 
 ## Post-scaffold setup
 
-1. Create the Keystatic Cloud project (keystatic.cloud) and set
-   `cloud.project` in `keystatic.config.ts` to `<team>/<project>`.
-2. Fill in `src/config/site.ts` (name, url, description, social, OG image).
-3. Set the `Sitemap:` line in `public/robots.txt` to your real domain.
-4. Fill in `infra/variables.tf`'s `domain_name` (left blank by `init.ts`).
-5. Create the GitHub repo, push, then follow `infra/README.md` to apply
+1. Fill in `src/config/site.ts` (name, url, description, social, OG image).
+2. Set the `Sitemap:` line in `public/robots.txt` to your real domain.
+3. Fill in `infra/variables.tf`'s `domain_name` (left blank by `init.ts`).
+4. Create the GitHub repo, push, then follow `infra/README.md` to apply
    Terraform and wire up the `gha-deploy`/`gha-terraform` OIDC roles.
 
 ## Credits

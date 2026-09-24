@@ -34,12 +34,6 @@ variable "domain_name" {
   default     = ""
 }
 
-variable "domain_hidden" {
-  description = "403s requests to domain_name/www while true, so the site is reachable only via the *.cloudfront.net URL. Set true only while deliberately holding the domain back pre-launch; flip to false to go live on the real domain."
-  type        = bool
-  default     = false
-}
-
 variable "tfstate_bucket" {
   description = "S3 bucket holding this project's Terraform state (must already exist — create it manually before the first `terraform init`; must match backend.tf's `bucket` value exactly)."
   type        = string

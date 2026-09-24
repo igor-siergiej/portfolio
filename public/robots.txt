@@ -1,5 +1,4 @@
 User-agent: *
 Allow: /
-Disallow: /keystatic
 
-Sitemap: __APP_SITE_URL__/sitemap-index.xml
+Sitemap: http://localhost:4321/sitemap-index.xml

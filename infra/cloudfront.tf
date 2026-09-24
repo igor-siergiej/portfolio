@@ -14,10 +14,8 @@ resource "aws_cloudfront_response_headers_policy" "security_headers" {
       override = true
     }
 
-    # SAMEORIGIN, not DENY: the Keystatic admin at /keystatic embeds the site in an
-    # iframe for live preview. Cross-origin framing is still blocked.
     frame_options {
-      frame_option = "SAMEORIGIN"
+      frame_option = "DENY"
       override     = true
     }
 
@@ -39,40 +37,6 @@ resource "aws_cloudfront_response_headers_policy" "security_headers" {
       override                   = true
     }
   }
-}
-
-# /keystatic is a directory, not an object, so it would hit the 403/404 fallback below and
-# render the 404 page instead of the CMS. Rewrite it to the real entry point. Also rewrites
-# the Cloud-mode OAuth callback path, which is a fixed URL the browser is redirected to
-# directly and would otherwise 404.
-#
-# Also gates the site by hostname: while hidden, the domain aliases 403 but the raw
-# *.cloudfront.net URL keeps working, since disabling the whole distribution would take
-# both down. var.domain_hidden defaults to false — flip it to true only while
-# deliberately holding a domain back pre-launch (see infra/README.md).
-resource "aws_cloudfront_function" "keystatic_index" {
-  name    = "${var.project}-keystatic-index"
-  runtime = "cloudfront-js-2.0"
-  publish = true
-  code    = <<-JS
-    var DOMAIN_HIDDEN = ${var.domain_hidden};
-    var HIDDEN_HOSTS = ['${var.domain_name}', 'www.${var.domain_name}'];
-
-    function handler(event) {
-        var request = event.request;
-        if (DOMAIN_HIDDEN && HIDDEN_HOSTS.includes(request.headers.host.value)) {
-            return { statusCode: 403, statusDescription: 'Forbidden' };
-        }
-        if (
-            request.uri === '/keystatic' ||
-            request.uri === '/keystatic/' ||
-            request.uri === '/keystatic/cloud/oauth/callback'
-        ) {
-            request.uri = '/keystatic/index.html';
-        }
-        return request;
-    }
-  JS
 }
 
 resource "aws_cloudfront_distribution" "site" {
@@ -98,11 +62,6 @@ resource "aws_cloudfront_distribution" "site" {
     # Managed-CachingOptimized. Per-object Cache-Control set on upload.
     cache_policy_id            = "658327ea-f89d-4fab-a63d-7e88639e58f6"
     response_headers_policy_id = aws_cloudfront_response_headers_policy.security_headers.id
-
-    function_association {
-      event_type   = "viewer-request"
-      function_arn = aws_cloudfront_function.keystatic_index.arn
-    }
   }
 
   # This is a static multi-page site, not a client-routed SPA: an unknown path is a real

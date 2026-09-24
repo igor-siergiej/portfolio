@@ -127,7 +127,6 @@ not as something that physically blocks the merge button.
 - Bucket versioning is enabled for rollback after a bad deploy; noncurrent versions expire after 30 days.
 - Responses carry a security headers policy (HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, X-XSS-Protection).
 - Routing: a missing/mistyped path is a real 404 — CloudFront maps 403/404 → `/404.html` (response code 404), not to the homepage.
-- Caching: content-hashed `_astro/*` uploaded `immutable`; `images/*` (Keystatic overwrites these in place) uploaded with a 1-hour cache; every page, `sitemap*.xml`, `rss.xml` and `robots.txt` uploaded `no-cache` — set by the deploy job in `.github/workflows/ci-cd.yml`.
-- `var.domain_hidden` (default `false`) 403s the real domain while `true`, leaving only the `*.cloudfront.net` URL reachable — use it to stage a domain pre-launch, then flip to `false` (or unset) to go live.
+- Caching: content-hashed `_astro/*` uploaded `immutable`; `images/*` (committed by hand at stable paths) uploaded with a 1-hour cache; every page, `sitemap*.xml`, `rss.xml` and `robots.txt` uploaded `no-cache` — set by the deploy job in `.github/workflows/ci-cd.yml`.
 - If the account already has a GitHub OIDC provider, `terraform import` it into
   `aws_iam_openid_connect_provider.github` before applying (AWS allows only one per URL).
