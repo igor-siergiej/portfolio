@@ -46,7 +46,12 @@ describe('orderedProjects', () => {
     });
 
     it('puts featured entries before unfeatured ones within a status', () => {
-        const result = orderedProjects([project('zeta', 'active'), project('alpha', 'active', 3)]);
-        expect(result.map((p) => p.id)).toEqual(['alpha', 'zeta']);
+        const result = orderedProjects([project('alpha', 'active'), project('zeta', 'active', 3)]);
+        expect(result.map((p) => p.id)).toEqual(['zeta', 'alpha']);
+    });
+
+    it('orders featured entries by rank within a status', () => {
+        const result = orderedProjects([project('alpha', 'active', 2), project('zeta', 'active', 1)]);
+        expect(result.map((p) => p.id)).toEqual(['zeta', 'alpha']);
     });
 });
