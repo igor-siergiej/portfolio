@@ -174,9 +174,9 @@ automatically, and so does any repository renamed or transferred after that
 date; existing repositories can opt in.
 
 taisei-karate was created on 25 July 2026 — ten days after that cutover — so it
-has carried the immutable subject from its first workflow run, with no rename
-and nothing opted into (`use_default: true`). The prefix its tokens actually
-carry is not `repo:igor-siergiej/taisei-karate` but:
+has carried the immutable subject from its first workflow run, with nothing
+opted into (`use_default: true`) and no rename needed to trigger it. The prefix
+its tokens actually carry is not `repo:igor-siergiej/taisei-karate` but:
 
 ```
 repo:igor-siergiej@79415930/taisei-karate@1312344887
@@ -228,9 +228,12 @@ wrong. I wrote "this repo was renamed at some point" because a rename was the
 story I had in my head, and never checked it. One call to
 `gh api repos/igor-siergiej/taisei-karate --jq .created_at` returns
 `2026-07-25T22:29:48Z` — after the 15 July cutover — and the sub endpoint above
-reports `use_default: true`, so nothing was renamed and nothing was opted into.
-The workaround was right and the reason was invented. Write down the value you
-verified; be careful about writing down a cause you only assumed.
+reports `use_default: true`, so the format applied at creation and nothing was
+opted into. A rename may or may not have happened since; either way it cannot be
+the cause, because there was never a moment when this repository did not have an
+immutable subject. The workaround was right and the reason was invented. Write
+down the value you verified; be careful about writing down a cause you only
+assumed.
 
 ## While you're in there: `environment:` rewrites the subject too
 
