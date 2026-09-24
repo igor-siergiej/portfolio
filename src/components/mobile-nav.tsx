@@ -30,14 +30,14 @@ export function MobileNav({ links, currentPath }: { links: NavLink[]; currentPat
                             key={link.href}
                             href={link.href}
                             aria-current={currentPath.startsWith(link.href) ? 'page' : undefined}
-                            className="border-b border-border py-3 text-base text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:text-foreground"
+                            className="border-b border-border py-3 text-base text-muted-foreground transition-colors hover:text-foreground focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring aria-[current=page]:text-foreground"
                         >
                             {link.label}
                         </a>
                     ))}
                     <a
                         href="/cv.pdf"
-                        className="mt-5 rounded-full border border-foreground px-4 py-2 text-center text-sm transition-colors hover:border-primary hover:text-primary"
+                        className="mt-5 rounded-full border border-foreground px-4 py-2 text-center text-sm transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                     >
                         Download CV
                     </a>

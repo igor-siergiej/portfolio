@@ -1,14 +1,20 @@
 ---
+import { siteConfig } from '@/config/site';
+
 const year = new Date().getFullYear();
+
+const linkClass =
+    'transition-colors hover:text-foreground focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 ---
 
 <footer class="mt-24 border-t border-border">
     <div class="container flex flex-col gap-3 py-8 font-mono text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-        <span>© {year} Igor Siergiej — built with Astro, deployed on CloudFront</span>
+        <span>© {year} {siteConfig.name} — built with Astro, deployed on CloudFront</span>
         <nav aria-label="Footer" class="flex gap-5">
-            <a href="/rss.xml" class="transition-colors hover:text-foreground">RSS</a>
-            <a href="https://github.com/igor-siergiej" class="transition-colors hover:text-foreground">GitHub</a>
-            <a href="mailto:igorsiergiej@gmail.com" class="transition-colors hover:text-foreground">Email</a>
+            <a href="/rss.xml" class={linkClass}>RSS</a>
+            <a href={siteConfig.social.github} class={linkClass}>GitHub</a>
+            <a href={siteConfig.social.linkedin} class={linkClass}>LinkedIn</a>
+            <a href={`mailto:${siteConfig.email}`} class={linkClass}>Email</a>
         </nav>
     </div>
 </footer>
