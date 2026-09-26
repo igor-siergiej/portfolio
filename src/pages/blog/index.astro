@@ -16,8 +16,15 @@ const formatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'sho
         {
             posts.map((post) => (
                 <li class="border-t border-border">
-                    <a href={`/blog/${post.id}/`} class="group grid grid-cols-[7rem_1fr_4rem] items-baseline gap-5 py-5">
-                        <span class="font-mono text-xs text-muted-foreground">
+                    {/* Below `sm:` the two fixed columns plus gaps would leave the title
+                        ~110px of a 390px viewport and wrap it to four lines of display
+                        serif, so the date and reading time share a meta row above a
+                        full-width title; from `sm:` up all three sit on one line. */}
+                    <a
+                        href={`/blog/${post.id}/`}
+                        class="group grid grid-cols-[1fr_4rem] items-baseline gap-x-5 gap-y-1.5 py-5 sm:grid-cols-[7rem_1fr_4rem] sm:gap-y-0"
+                    >
+                        <span class="col-start-1 row-start-1 font-mono text-xs text-muted-foreground">
                             {post.data.publishDate ? (
                                 <time datetime={post.data.publishDate.toISOString()}>
                                     {formatter.format(post.data.publishDate)}
@@ -26,10 +33,10 @@ const formatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'sho
                                 '—'
                             )}
                         </span>
-                        <span class="font-display text-xl transition-colors group-hover:text-primary">
+                        <span class="col-span-2 row-start-2 font-display text-xl transition-colors group-hover:text-primary sm:col-span-1 sm:col-start-2 sm:row-start-1">
                             {post.data.title}
                         </span>
-                        <span class="text-right font-mono text-xs text-muted-foreground">
+                        <span class="col-start-2 row-start-1 text-right font-mono text-xs text-muted-foreground sm:col-start-3">
                             {estimateReadingMinutes(post.body ?? '')} min
                         </span>
                     </a>
