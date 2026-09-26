@@ -1,12 +1,23 @@
 # GitHub Actions OIDC federation → short-lived deploy role (no stored AWS keys).
+#
+# AWS allows exactly one OIDC provider per URL per account, and taisei-karate already owns
+# token.actions.githubusercontent.com in account 777799876926. Creating a second one fails
+# with EntityAlreadyExists, so this config reuses the existing provider when
+# var.existing_oidc_provider_arn is set and only creates one when it isn't.
 data "tls_certificate" "github" {
-  url = "https://token.actions.githubusercontent.com"
+  count = var.existing_oidc_provider_arn == "" ? 1 : 0
+  url   = "https://token.actions.githubusercontent.com"
 }
 
 resource "aws_iam_openid_connect_provider" "github" {
+  count           = var.existing_oidc_provider_arn == "" ? 1 : 0
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.github.certificates[0].sha1_fingerprint]
+  thumbprint_list = [data.tls_certificate.github[0].certificates[0].sha1_fingerprint]
+}
+
+locals {
+  oidc_provider_arn = var.existing_oidc_provider_arn != "" ? var.existing_oidc_provider_arn : aws_iam_openid_connect_provider.github[0].arn
 }
 
 data "aws_iam_policy_document" "assume" {
@@ -15,7 +26,7 @@ data "aws_iam_policy_document" "assume" {
 
     principals {
       type        = "Federated"
-      identifiers = [aws_iam_openid_connect_provider.github.arn]
+      identifiers = [local.oidc_provider_arn]
     }
 
     condition {
@@ -76,7 +87,7 @@ data "aws_iam_policy_document" "assume_terraform" {
 
     principals {
       type        = "Federated"
-      identifiers = [aws_iam_openid_connect_provider.github.arn]
+      identifiers = [local.oidc_provider_arn]
     }
 
     condition {
@@ -204,7 +215,7 @@ data "aws_iam_policy_document" "terraform" {
     ]
   }
 
-  # CloudFront: distribution/OAC/response-headers-policy/function CRUD. Resource "*" —
+  # CloudFront: distribution/OAC/response-headers-policy CRUD. Resource "*" —
   # AWS assigns the ID, so it can't be named before it exists.
   statement {
     sid = "CloudFront"
@@ -220,10 +231,6 @@ data "aws_iam_policy_document" "terraform" {
       "cloudfront:CreateResponseHeadersPolicy",
       "cloudfront:UpdateResponseHeadersPolicy",
       "cloudfront:DeleteResponseHeadersPolicy",
-      "cloudfront:CreateFunction",
-      "cloudfront:UpdateFunction",
-      "cloudfront:DeleteFunction",
-      "cloudfront:PublishFunction",
     ]
     resources = ["*"]
   }
@@ -234,7 +241,7 @@ data "aws_iam_policy_document" "terraform" {
   # file) — read access comes from the ReadOnly statement above, but letting
   # gha-terraform modify its own trust anchor would be a materially worse escalation than
   # this role-creation surface; if the provider ever needs to change, that goes through a
-  # manual/admin apply (see infra/README.md's note on importing a pre-existing provider).
+  # manual/admin apply (see infra/README.md's note on reusing a pre-existing provider).
   statement {
     sid = "Iam"
     actions = [
@@ -245,6 +252,59 @@ data "aws_iam_policy_document" "terraform" {
       "iam:DeleteRolePolicy",
     ]
     resources = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.project}-*"]
+  }
+
+  # SNS + CloudWatch for monitoring.tf, scoped to this project's own topic and alarms
+  # rather than "*".
+  #
+  # Reads are sns:Get*/List* rather than an enumerated list on purpose: the set of read
+  # calls the provider makes while refreshing an aws_sns_topic is not stable across
+  # provider versions. v5.100 already calls sns:GetDataProtectionPolicy in that path, which
+  # an enumerated list written from the resource's arguments would miss, failing the next
+  # plan with AccessDenied on a resource nobody changed. The wildcard is bounded by the
+  # resource ARNs below, so it still grants nothing about any other topic in the account.
+  #
+  # Both ARN forms are needed: sns:CreateTopic/Subscribe/Set|GetTopicAttributes authorize
+  # against the topic ARN, while sns:Unsubscribe and sns:GetSubscriptionAttributes
+  # authorize against the subscription ARN, which is the topic ARN plus a ":<uuid>" suffix.
+  statement {
+    sid = "Sns"
+    actions = [
+      "sns:CreateTopic",
+      "sns:DeleteTopic",
+      "sns:SetTopicAttributes",
+      "sns:Subscribe",
+      "sns:Unsubscribe",
+      "sns:Get*",
+      "sns:List*",
+    ]
+    resources = [
+      "arn:aws:sns:*:${data.aws_caller_identity.current.account_id}:${var.project}-alerts-use1",
+      "arn:aws:sns:*:${data.aws_caller_identity.current.account_id}:${var.project}-alerts-use1:*",
+    ]
+  }
+
+  # Tagging actions aren't used today (no tags on the alarms, no provider default_tags) but
+  # are granted so adding either later doesn't fail the apply on a permission rather than
+  # on the change itself.
+  statement {
+    sid = "CloudWatchAlarms"
+    actions = [
+      "cloudwatch:PutMetricAlarm",
+      "cloudwatch:DeleteAlarms",
+      "cloudwatch:ListTagsForResource",
+      "cloudwatch:TagResource",
+      "cloudwatch:UntagResource",
+    ]
+    resources = ["arn:aws:cloudwatch:*:${data.aws_caller_identity.current.account_id}:alarm:${var.project}-*"]
+  }
+
+  # cloudwatch:DescribeAlarms is the provider's refresh read for every alarm and doesn't
+  # support resource-level permissions — AWS only accepts "*" here.
+  statement {
+    sid       = "CloudWatchRead"
+    actions   = ["cloudwatch:DescribeAlarms"]
+    resources = ["*"]
   }
 }
 

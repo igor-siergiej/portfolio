@@ -1,6 +1,6 @@
 terraform {
   backend "s3" {
-    bucket       = "portfolio-tfstate-CHANGEME" # must match var.tfstate_bucket in variables.tf / terraform.tfvars
+    bucket       = "portfolio-tfstate-777799876926" # must match var.tfstate_bucket
     key          = "portfolio/terraform.tfstate"
     region       = "eu-west-2"
     encrypt      = true

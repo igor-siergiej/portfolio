@@ -62,16 +62,14 @@ table needed. That bucket can't be created by the same Terraform config that nee
 store its own state, so create it manually first:
 
 ```bash
-aws s3 mb s3://your-project-tfstate-<account-id> --region eu-west-2
-aws s3api put-bucket-versioning --bucket your-project-tfstate-<account-id> --versioning-configuration Status=Enabled
+aws s3 mb s3://portfolio-tfstate-777799876926 --region eu-west-2
+aws s3api put-bucket-versioning --bucket portfolio-tfstate-777799876926 --versioning-configuration Status=Enabled
 ```
 
-Then replace `CHANGEME` in `infra/backend.tf`'s `bucket` with that real bucket name, and set
-the same value for `tfstate_bucket` in a `terraform.tfvars` (gitignored, `infra/*.tfvars`):
-
-```hcl
-tfstate_bucket = "your-project-tfstate-<account-id>"
-```
+That name is already committed in `infra/backend.tf`'s `bucket` and as the `tfstate_bucket`
+default in `infra/variables.tf`. `backend.tf` can't reference variables, so if you point this
+stack at a different bucket you must change both by hand or the terraform role's state
+permissions won't match the bucket the backend actually writes to.
 
 ```bash
 cd infra
@@ -81,7 +79,7 @@ terraform apply
 
 ## Wire up CI deploy
 
-`terraform apply` prints four outputs. Set them as **GitHub repository variables**
+`terraform apply` prints the outputs below. Set them as **GitHub repository variables**
 (Settings → Secrets and variables → Actions → *Variables*), or:
 
 ```bash
@@ -128,5 +126,7 @@ not as something that physically blocks the merge button.
 - Responses carry a security headers policy (HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, X-XSS-Protection).
 - Routing: a missing/mistyped path is a real 404 — CloudFront maps 403/404 → `/404.html` (response code 404), not to the homepage.
 - Caching: content-hashed `_astro/*` uploaded `immutable`; `images/*` (committed by hand at stable paths) uploaded with a 1-hour cache; every page, `sitemap*.xml`, `rss.xml` and `robots.txt` uploaded `no-cache` — set by the deploy job in `.github/workflows/ci-cd.yml`.
-- If the account already has a GitHub OIDC provider, `terraform import` it into
-  `aws_iam_openid_connect_provider.github` before applying (AWS allows only one per URL).
+- The account already has a GitHub Actions OIDC provider (AWS allows only one per URL, and
+  `taisei-karate` owns it here), so `var.existing_oidc_provider_arn` defaults to that ARN and
+  this config reuses it rather than creating a second one. Set it to `""` only when applying
+  into an account that has none, in which case Terraform creates the provider itself.
