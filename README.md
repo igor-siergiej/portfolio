@@ -6,6 +6,8 @@ Astro (static) + Tailwind v4 + React islands, content as files, deployed to AWS
 S3 + CloudFront via Terraform and GitHub Actions OIDC. No CMS, no server.
 
 Not deployed yet — the AWS stack has not been applied, so there is no live URL.
+`public/robots.txt` still advertises `Sitemap: http://localhost:4321/…` and stays
+that way until the stack is applied and the real origin is known.
 
 ## Commands
 
