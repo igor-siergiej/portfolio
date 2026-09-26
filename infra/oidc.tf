@@ -200,9 +200,9 @@ data "aws_iam_policy_document" "terraform" {
   }
 
   # tfstate bucket predates this config (see backend.tf) so it isn't a managed resource
-  # here — its ARN is built from var.tfstate_bucket, which must be set (via
-  # terraform.tfvars) to the same bucket name as backend.tf's literal `bucket` value;
-  # backend.tf can't reference variables, so the two have to be kept in sync by hand.
+  # here — its ARN is built from var.tfstate_bucket, whose default in variables.tf must
+  # name the same bucket as backend.tf's literal `bucket` value; backend.tf can't
+  # reference variables, so those two places have to be kept in sync by hand.
   # Kept explicit and self-contained (not folded into the generic ReadOnly statement
   # above) since state read/write is a distinct, security-sensitive concern from the
   # infra it describes.

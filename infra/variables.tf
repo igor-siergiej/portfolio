@@ -41,7 +41,7 @@ variable "tfstate_bucket" {
 
   validation {
     condition     = length(var.tfstate_bucket) > 0
-    error_message = "tfstate_bucket must be set (in terraform.tfvars) to the same bucket name as backend.tf's `bucket` value — it can't be left blank."
+    error_message = "tfstate_bucket can't be blank — it must name the same bucket as backend.tf's `bucket` value. Both are committed with that name (this variable's default, and the literal in backend.tf); backend.tf can't reference variables, so pointing this stack at a different bucket means editing both by hand."
   }
 }
 
@@ -52,7 +52,7 @@ variable "existing_oidc_provider_arn" {
 }
 
 variable "enable_monitoring" {
-  description = "Provisions the SNS alert topics and CloudWatch alarms in monitoring.tf. AWS emails a subscription confirmation on first apply — unconfirmed subscriptions deliver nothing."
+  description = "Provisions the SNS alert topic and CloudWatch alarms in monitoring.tf. AWS emails a subscription confirmation on first apply — an unconfirmed subscription delivers nothing."
   type        = bool
   default     = true
 }
