@@ -1,0 +1,13 @@
+{
+  "ignorePatterns": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.integration.test.ts",
+    "**/dist/**",
+    "**/build/**",
+    "**/coverage/**"
+  ],
+  "ignoreUnresolvedImports": ["bun:test"],
+  "ignoreDependencies": ["@astrojs/markdoc", "@astrojs/react", "@astrojs/sitemap", "@tailwindcss/vite"],
+  "entry": ["markdoc.config.mjs"]
+}

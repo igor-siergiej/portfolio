@@ -1,0 +1,61 @@
+---
+import { MobileNav } from '@/components/mobile-nav';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { siteConfig } from '@/config/site';
+
+const links = [
+    { href: '/projects', label: 'Projects' },
+    { href: '/blog', label: 'Writing' },
+    { href: '/about', label: 'About' },
+];
+
+const path = Astro.url.pathname;
+
+// The wordmark sets the surname in italic primary, so it needs the name in two pieces —
+// taken from `siteConfig.name` rather than retyped, which would be a second source of truth.
+const [givenName, ...surname] = siteConfig.name.split(' ');
+
+// `outline-2` also sets `outline-style: solid`, which the UA's `outline-style: auto` ring does
+// not, and Chromium ignores `outline-color` while the style is `auto`.
+const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+// Square-cornered links get a hair of radius so the ring doesn't read as a hard box; the CV
+// pill is left alone because a `rounded-sm` on focus would square off its own border.
+const textFocusRing = `${focusRing} focus-visible:rounded-sm`;
+---
+
+<header class="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
+    <div class="container flex h-18 items-center justify-between gap-6">
+        <a href="/" class:list={['font-display text-xl font-semibold tracking-tight', textFocusRing]}>
+            {givenName} <span class="text-primary italic">{surname.join(' ')}</span>
+        </a>
+        <nav aria-label="Primary" class="hidden items-center gap-7 text-sm sm:flex">
+            {
+                links.map((link) => (
+                    <a
+                        href={link.href}
+                        aria-current={path.startsWith(link.href) ? 'page' : undefined}
+                        class:list={[
+                            'border-b border-transparent pb-0.5 text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:border-primary aria-[current=page]:text-foreground',
+                            textFocusRing,
+                        ]}
+                    >
+                        {link.label}
+                    </a>
+                ))
+            }
+        </nav>
+        <div class="flex items-center gap-2">
+            <a
+                href="/cv.pdf"
+                class:list={[
+                    'hidden rounded-full border border-foreground px-4 py-2 text-sm transition-colors hover:border-primary hover:text-primary sm:inline-block',
+                    focusRing,
+                ]}
+            >
+                Download CV
+            </a>
+            <ThemeToggle client:idle />
+            <MobileNav links={links} currentPath={path} client:idle />
+        </div>
+    </div>
+</header>

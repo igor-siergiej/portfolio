@@ -1,0 +1,111 @@
+---
+title: taisei-karate
+summary: Client site for a karate academy — static Astro on S3/CloudFront, a Git-backed CMS the owner edits directly, and a serverless contact pipeline. All Terraform.
+role: Solo — design, build, operate
+period: 2026 — present
+stack: [Astro 7, React 19, Keystatic, Tailwind 4, Terraform, AWS, Lambda, SES, GitHub Actions]
+repo: https://github.com/igor-siergiej/taisei-karate
+live: https://taiseikarate.uk
+status: maintained
+---
+
+## Problem
+
+A karate academy teaching at two locations needed a site that ranked for local
+searches, listed class times accurately, and could take an enquiry — and that
+the owner could update without me. The usual answers each fail one of those.
+A hosted site builder makes the content easy and the SEO and cost opaque. A
+CMS-backed dynamic site means a server, a database and a patching schedule for a
+site that changes a few times a month.
+
+## Approach
+
+Serve a fully static build from S3 through CloudFront, with no origin server at
+all. Put the content in the repository as YAML and Markdoc, and put a CMS in
+front of it — Keystatic, which commits directly to GitHub, so an edit is a
+commit and a deploy rather than a database write. The only two things that can't
+be static — the contact form and Keystatic's OAuth token exchange — are one
+small Lambda each. All of it is Terraform; there is no
+console click that isn't reproducible.
+
+## Architecture
+
+**Site.** Astro 7 in static output with React 19 islands, Tailwind 4 and
+shadcn components. Content lives in `src/content` — locations, testimonials,
+FAQs, gallery and a couple of Markdoc pages — and is edited through Keystatic's
+admin at `/keystatic`, backed by a GitHub App. Each location emits its own
+`SportsActivityLocation` JSON-LD node with address, telephone and opening hours,
+addressed by a stable `@id` so other schema blocks can reference that exact
+business node rather than creating an anonymous duplicate.
+
+**Delivery.** A private S3 bucket with all public access blocked; its policy
+grants `s3:GetObject` only to `cloudfront.amazonaws.com`, conditioned on this
+distribution's ARN. CloudFront reaches it through an Origin Access Control
+signing SigV4. A CloudFront Function on viewer-request does directory-index
+rewriting (`/langley` → `/langley/index.html`), keeps the Keystatic SPA's
+sub-routes on its single entry point, and stamps `x-forwarded-host`. A response
+headers policy sets HSTS, CSP, frame options and a `Permissions-Policy`.
+
+**Contact.** A Node Lambda behind an HTTP API, throttled at 5 requests/second
+with a burst of 10, sending through SES. It validates required fields, length
+caps and email shape, and carries a honeypot `company` field — filled by bots,
+invisible to users — which returns `200` without sending, so the bot learns
+nothing.
+
+**Operations.** An account-wide CloudTrail trail plus CloudFront and S3 access
+logs, all into one logs bucket on split retention — access logs expire at 90 days
+because they contain visitor IPs, CloudTrail's management-event history is kept
+for 365 — and CloudWatch alarms on contact-form flood, API 5xx, Lambda errors and
+CloudFront request volume, all into one SNS topic.
+
+**Deploys.** GitHub Actions assumes one of two OIDC roles — `gha-deploy`, which
+can only sync the bucket and create an invalidation, and `gha-terraform`, which
+manages the infrastructure. No AWS access key exists anywhere.
+
+## Decisions and trade-offs
+
+**Private bucket plus OAC, not a public website bucket.** S3 static website
+hosting is one checkbox and gives you directory indexes for free. It also serves
+plain HTTP from a bucket-level public grant that anyone can hit directly,
+bypassing CloudFront, its cache and its security headers. Going private moves
+directory-index resolution into a CloudFront Function — real work, and the reason
+the rewrite logic has a `/api/` guard for the Lambda-origin behaviour. In
+exchange there is exactly one way to reach an object.
+
+**WAF is provisioned but off by default.** The web ACL exists in
+`infra/waf.tf` behind `var.enable_waf`. At roughly $8/month against a static site
+that already sits behind CloudFront and Shield Standard, with the only dynamic
+route throttled at API Gateway and alarmed in CloudWatch, paying continuously for
+managed rule groups is buying insurance against a risk the architecture has
+mostly removed. The flag means turning it on during an incident is one apply —
+and turning it *off* is documented as a two-step detach, because Terraform races
+the delete against the detach and fails.
+
+**Terraform's own role is scoped by workspace, not shared.** Staging and
+production share one state bucket, so `gha-terraform`'s state permissions are
+computed from `terraform.workspace` — each workspace's applied policy names only
+its own state key. Prod state holds the Keystatic GitHub App secret in plaintext;
+staging's auto-applying role must not be able to read it.
+
+**The OIDC trust policy was the hard part.** Two things broke it in production.
+Setting `environment:` on a job silently rewrites the token's `sub` claim to
+`repo:<repo>:environment:<name>`, so every `AssumeRoleWithWebIdentity` started
+failing with "Not authorized" until the policies matched. And because this repo
+was created after GitHub's 15 July 2026 cutover, it issues an *immutable*,
+ID-suffixed subject —
+`igor-siergiej@79415930/taisei-karate@1312344887` — so the plain `owner/repo`
+value fails every time. Both are now comments in `infra/` rather than folklore;
+the second is [written up in full](/blog/static-sites-without-click-ops/).
+
+## Outcome
+
+Live at [taiseikarate.uk](https://taiseikarate.uk). Content edits go through
+Keystatic and deploy themselves; infrastructure changes run `terraform plan` on
+the PR and apply on merge. With no origin server, the standing cost is S3,
+CloudFront and two Lambdas that only run on a form submission or a CMS login.
+
+The shape is reusable and has been extracted into a scaffold,
+[`content-website-template`](https://github.com/igor-siergiej/content-website-template),
+so the next content site starts from this rather than from a blank Terraform
+directory. The honest caveat is that taisei-karate's own README is still the
+template's — it documents the scaffold, not the site that grew out of it.

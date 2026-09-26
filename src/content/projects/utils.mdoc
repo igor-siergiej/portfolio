@@ -1,0 +1,86 @@
+---
+title: utils
+summary: The shared foundation the other apps are built on — API and web packages, a Biome preset, CI scripts, and a Kanban worker CLI, published from one Turborepo.
+role: Solo — design, build, maintain
+period: 2025 — present
+stack: [Bun, TypeScript, Turborepo, tsup, Hono, semantic-release, npm]
+repo: https://github.com/igor-siergiej/utils
+status: maintained
+---
+
+## Problem
+
+The third time I wrote a config loader that validates required environment
+variables and throws a useful error, the pattern was obviously settled and
+obviously in the wrong place. The same was true of the logger, the Mongo
+connection helper, the DI container, the CORS-and-error-handler Hono setup, and
+the token-refresh hook on the front end. Copy-paste means a fix lands in one repo
+and rots in two.
+
+## Approach
+
+One repository, several small published packages, each with a narrow remit and no
+ambition to be a framework. If a piece of code is genuinely the same in two apps,
+it moves here; if it merely looks similar, it stays where it is.
+
+## Architecture
+
+A Bun workspace driven by Turborepo, built with tsup, published to npm.
+
+- **`@imapps/api-utils`** — the server foundation. `createApp` returns a Hono app
+  with an origin-reflecting CORS allow-list, request logging and a shared error
+  handler already attached; alongside it sit the config service, structured
+  logger, DI container, Mongo connection and MinIO object-store connection. It
+  ships a `./hono` subpath export so a consumer that only wants the app factory
+  doesn't pull in the database code.
+- **`@imapps/web-utils`** — the client half of authentication: a
+  `ProtectedRoute`, an auth context, and the `useTokenRefresh` /
+  `useTokenInitialization` / `useAuthRedirect` hooks that make a `401` a
+  transparent retry rather than a logout.
+- **`@imapps/biome-config`** — one lint/format baseline, published as a single
+  `base` preset, so "the rules" are a dependency bump for the repos that extend it.
+- **`@imapps/dev-scripts`** — the `fallow` dead-code audit wired to run locally
+  exactly as CI runs it, downloading the binary on first use.
+- **`@imapps/kanban-cli`** — a CLI plus agent skill that drives a Kanban-board
+  markdown file to completion: implement an item, run Playwright e2e as a merge
+  gate, open a PR, wait for CI, merge, wait for the deploy, smoke-check live, and
+  revert if that fails.
+
+The repo also carries the shared CI layer the app repos consume as a submodule:
+`pipelines/scripts` builds and publishes each service's Docker images from a
+per-service JSON config, so adding an image to a service is a config entry rather
+than another copy of a build script.
+
+## Decisions and trade-offs
+
+**One version across every package, stamped by semantic-release.** Independent
+per-package versioning is the textbook answer for a monorepo and is genuinely
+better when packages have independent consumers. These do not — they are consumed
+together by the same four apps. A `stamp-versions` script writes the computed
+release version into the root manifest and every workspace package, so
+`@imapps/api-utils` and `@imapps/web-utils` are always the same commit — as I
+write this, both sit at `0.11.0` on npm, as does `@imapps/kanban-cli`.
+The cost is version churn in packages that did not change; the win is that
+"which versions go together" is never a question.
+
+**Subpath exports instead of one barrel.** `@imapps/api-utils` exports `.` and
+`./hono` separately. A single entry point would be simpler to publish and would
+mean every consumer of `createApp` also resolves the MongoDB and MinIO clients.
+kivo is small on purpose, and that mattered.
+
+**Extract after the copy, not before it.** Nothing here was designed as a shared
+package first. The auth hooks and `ProtectedRoute` lived in shoppingo and were
+lifted into `web-utils` only once jewellery-catalogue needed the same behaviour;
+shoppingo's own auth components were deleted in the same pass. That ordering is
+why the packages are small and why nothing in them is configurable "just in
+case" — the second call site defines the interface, not a guess about a third.
+
+## Outcome
+
+Consumed by shoppingo, jewellery-catalogue, kivo and mixtape. CI is lint → test →
+semantic-release → publish changed packages to npm, all on Bun.
+
+The README is the weakest part and says so implicitly — it still documents a
+Yarn/GitLab publishing flow that has been GitHub Actions and Bun for some time.
+The `templates.yml` GitLab CI template is likewise marked deprecated in place
+rather than deleted; that is a cleanup I owe the repo.

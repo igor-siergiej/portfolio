@@ -1,0 +1,14 @@
+---
+title: Unpublished draft fixture
+description: Unpublished by design — the end-to-end suite uses it to prove drafts stay out.
+publishDate: 2026-01-01
+draft: true
+---
+
+`draft: true` keeps this entry out of the feed, the blog index, the home page and
+the route table — every consumer of the collection goes through `publishedPosts`.
+
+`e2e/feed.spec.ts` reads the collection off disk and asserts the feed's item set
+equals the published posts exactly. This file is what makes that assertion fail
+if the draft filter ever stops being applied, so it is deliberately never
+published.

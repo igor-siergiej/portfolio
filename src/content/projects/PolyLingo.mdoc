@@ -1,0 +1,71 @@
+---
+title: PolyLingo
+summary: Android vocabulary trainer built on your own dictionary — enter the words you're actually learning, then drill them through generated games.
+role: Solo — design and build
+period: 2022 — 2023
+stack: [Kotlin, Jetpack Compose, Material 3, Room, Coroutines, Navigation Compose]
+repo: https://github.com/igor-siergiej/PolyLingo
+status: archived
+---
+
+## Problem
+
+Language apps teach their curriculum, not yours. The words you need are the ones
+you looked up this week — from a lesson, a conversation, a book — and a fixed
+course has no way to know what those are. Meanwhile a plain vocabulary list is
+something you write once and never open again, because reading a list is not
+practice.
+
+## Approach
+
+Make the dictionary the user's own, and make the drills come from it. You pick a
+native and a target language on first launch, add word pairs as you meet them,
+and the practice modes generate their content from whatever is currently in the
+dictionary — so the app's difficulty tracks your list rather than a syllabus.
+
+## Architecture
+
+Fully Jetpack Compose with Material 3, a single `MainActivity`, and
+Navigation Compose routing between screens declared in one `Screen` type.
+
+Vocabulary is a Room database: an `Entry` entity of `word` (primary key) and
+`translated_entry`, reached through an `EntryDao` and a `PolyLingoRepository`,
+with an `EntryViewModel` exposing it to Compose via LiveData. The DAO provides
+the four sort orders — by word or by translation, ascending or descending —
+rather than sorting in the UI.
+
+Practice is four screens sharing a config step: **word search** over a
+`LazyVerticalGrid` with long-press drag selection and a `CountDownTimer`,
+**mix and match**, **word order**, and a **review** screen. The config screen
+takes word count and time limit as sliders, so the same game is a two-minute or
+a ten-minute session.
+
+The chosen language pair is deliberately *not* in Room — it's a two-field comma
+separated `languages.txt` in the app's private files directory, read and written
+by a small `LanguageViewModel`.
+
+## Decisions and trade-offs
+
+**Language choice in a file, vocabulary in Room.** Two values that are read once
+at launch and written once at setup do not need a schema, a migration path or a
+DAO. Putting them in the database would have made the Room schema carry an
+effectively-singleton table forever. The trade-off is real: there are now two
+storage mechanisms to reason about, and the file has no versioning if its format
+ever changes.
+
+**Games generate from the live dictionary rather than a fixed pool.** It is what
+makes the app useful with twelve words and still useful with three hundred, and
+it means no content ships with the app. It also means a nearly-empty dictionary
+produces a degenerate game, which the config step's word-count slider only
+partly mitigates.
+
+**`word` as the primary key, not a generated id.** It makes duplicates
+impossible for free and keeps the DAO's sort queries trivial. It also means a
+typo can only be fixed by delete-and-re-add, and the same word with two
+different senses cannot both be stored.
+
+## Outcome
+
+Finished as a university-era project and archived. Built against Compose 1.1,
+Material 3 while it was still in alpha, and `minSdk` 22 — still on `versionCode
+1`, because it was built to learn Compose and Room properly and it did that.
