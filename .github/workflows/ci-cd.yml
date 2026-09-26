@@ -151,6 +151,8 @@ jobs:
             --include "_astro/*" \
             --cache-control "public, max-age=31536000, immutable"
       - name: Upload editable images (short cache)
+        env:
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
         run: |
           # Project screenshots and OG images are committed by hand at stable paths, not
           # content-hashed, so a replaced image must reach returning visitors well before
@@ -158,13 +160,17 @@ jobs:
           # the hashed-assets sync above just uploaded.
           #
           # Astro only emits dist/images when public/images holds files, and it holds none
-          # today — sync against a missing path is a hard error, so skip instead.
+          # today. `aws s3 sync` against a missing source is a hard error — but simply
+          # skipping the step would skip the only --delete pass scoped to this prefix (the
+          # catch-all sync below excludes images/*), so an image deleted from the repo would
+          # keep serving from S3 forever. Empty the prefix instead: `s3 rm --recursive`
+          # matches no keys and exits 0 when there is nothing there.
           if [ -d dist/images ]; then
-            aws s3 sync dist/images "s3://${{ vars.S3_BUCKET }}/images" \
+            aws s3 sync dist/images "s3://$S3_BUCKET/images" \
               --delete \
               --cache-control "public, max-age=3600"
           else
-            echo "dist/images absent — no hand-committed images to upload."
+            aws s3 rm "s3://$S3_BUCKET/images" --recursive
           fi
       - name: Upload everything else — pages, feeds, robots.txt (no-cache)
         run: |
