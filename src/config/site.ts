@@ -17,5 +17,3 @@ export const siteConfig = {
     },
     defaultOgImage: '/og-default.png',
 };
-
-export type SiteConfig = typeof siteConfig;

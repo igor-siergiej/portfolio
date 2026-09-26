@@ -8,5 +8,6 @@
     "**/coverage/**"
   ],
   "ignoreUnresolvedImports": ["bun:test"],
-  "ignoreDependencies": []
+  "ignoreDependencies": ["@astrojs/markdoc", "@astrojs/react", "@astrojs/sitemap", "@tailwindcss/vite"],
+  "entry": ["markdoc.config.mjs"]
 }
