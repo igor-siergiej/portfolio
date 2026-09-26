@@ -1,55 +1,31 @@
-# Content Website Template
+# portfolio
 
-Astro + Tailwind v4/shadcn scaffold for
-SEO-optimised content/promo sites. Deploys to AWS (S3 + CloudFront) via
-Terraform + GitHub Actions, no backend server at runtime.
+Personal portfolio and technical blog.
 
-## Create a new site
+Astro (static) + Tailwind v4 + React islands, content as files, deployed to AWS
+S3 + CloudFront via Terraform and GitHub Actions OIDC. No CMS, no server.
 
-```bash
-bunx degit igor-siergiej/content-website-template my-site
-cd my-site
-bun run init my-site         # replaces portfolio/Portfolio tokens, removes itself
-bun install
-git init && git add -A && git commit -m "chore: scaffold from content-website-template"
-```
-
-## Stack
-
-| Concern | Choice |
-|---------|--------|
-| Runtime / package manager | Bun |
-| Framework | Astro 7 (static output) |
-| Content | Markdoc files in `src/content/`, authored in-repo — no CMS, no backend |
-| UI | React 19 islands, Tailwind v4, shadcn (radix base, nova preset) |
-| Lint / format | Biome |
-| Hooks | Husky + lint-staged + commitlint (Conventional Commits) |
-| Release | semantic-release |
-| Dead code | Fallow |
-| CI | GitHub Actions (`.github/workflows`) |
-| Infra | Terraform (`infra/`) — S3 + CloudFront + GitHub OIDC, no servers |
+Not deployed yet — the AWS stack has not been applied, so there is no live URL.
 
 ## Commands
 
 ```bash
-bun run dev            # dev server, :4321
-bun run build          # static build -> dist/
-bun run preview        # preview the static build
-bun run lint           # biome check
-bun run test           # vitest
-bun run test:e2e       # playwright
+bun run dev       # dev server, :4321
+bun run build     # static build -> dist/
+bun run preview   # preview the build
+bun run lint      # biome check
+bun run test      # vitest
+bun run test:e2e  # playwright
 ```
 
-## Post-scaffold setup
+## Content
 
-1. Fill in `src/config/site.ts` (name, url, description, social, OG image).
-2. Set the `Sitemap:` line in `public/robots.txt` to your real domain.
-3. Fill in `infra/variables.tf`'s `domain_name` (left blank by `init.ts`).
-4. Create the GitHub repo, push, then follow `infra/README.md` to apply
-   Terraform and wire up the `gha-deploy`/`gha-terraform` OIDC roles.
+- Posts: `src/content/posts/*.mdoc` — set `draft: true` to keep a post out of the
+  index, the feed and the sitemap while it lives on `main`.
+- Projects: `src/content/projects/*.mdoc` — `featured: <n>` promotes a project to
+  the home page in ascending order; `status` drives grouping on `/projects`.
 
-## Credits
+## Deploying
 
-UI skeleton adapted from
-[leoMirandaa/shadcn-landing-page](https://github.com/leoMirandaa/shadcn-landing-page)
-(MIT).
+Push to `main`. CI lints, type-checks, tests, builds, releases and syncs to S3,
+then invalidates CloudFront. See `infra/README.md` for the Terraform side.

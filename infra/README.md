@@ -119,14 +119,25 @@ There's no branch-protection gate on the `plan` check (GitHub Pro is required fo
 required-status-checks on a private repo) — treat a red `plan` job as "don't merge yet",
 not as something that physically blocks the merge button.
 
+## Shared OIDC provider
+
+AWS permits exactly one IAM OIDC provider per issuer URL per account, and this account's
+`token.actions.githubusercontent.com` provider already exists — `taisei-karate` created it.
+So `oidc.tf` does not create one by default: `var.existing_oidc_provider_arn` defaults to
+that ARN and both roles' trust policies point at it. Creating a second provider for the
+same URL fails with `EntityAlreadyExists`; it is not a per-project resource.
+
+Set the variable to `""` only when applying into an account that has no GitHub Actions
+provider yet — Terraform then creates and manages one itself. Leave it alone in this
+account: destroying that provider is account-wide and would break every other repo that
+federates in, `taisei-karate` included.
+
 ## Notes
 
 - Bucket is private; only CloudFront can read it (OAC + bucket policy scoped to the distribution ARN).
 - Bucket versioning is enabled for rollback after a bad deploy; noncurrent versions expire after 30 days.
 - Responses carry a security headers policy (HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, X-XSS-Protection).
 - Routing: a missing/mistyped path is a real 404 — CloudFront maps 403/404 → `/404.html` (response code 404), not to the homepage.
-- Caching: content-hashed `_astro/*` uploaded `immutable`; `images/*` (committed by hand at stable paths) uploaded with a 1-hour cache; every page, `sitemap*.xml`, `rss.xml` and `robots.txt` uploaded `no-cache` — set by the deploy job in `.github/workflows/ci-cd.yml`.
-- The account already has a GitHub Actions OIDC provider (AWS allows only one per URL, and
-  `taisei-karate` owns it here), so `var.existing_oidc_provider_arn` defaults to that ARN and
-  this config reuses it rather than creating a second one. Set it to `""` only when applying
-  into an account that has none, in which case Terraform creates the provider itself.
+- Caching: content-hashed `_astro/*` uploaded `immutable`; `images/*` (committed by hand at stable paths) uploaded with a 1-hour cache; every page, `sitemap*.xml`, `rss.xml` and `robots.txt` uploaded `no-cache` — set by the deploy job in `.github/workflows/ci-cd.yml`. `public/images/` is empty today, so the deploy job skips that sync until the directory exists.
+- Monitoring (`monitoring.tf`, on by default via `var.enable_monitoring`): one SNS topic and two CloudFront alarms — 5xx rate above 1% for 10 minutes, and more than 50k requests in 5 minutes. The topic lives in us-east-1 because CloudFront publishes metrics only there and an alarm can only notify a topic in its own region; a regional (eu-west-2) topic would have nothing to publish to it. The first apply sends one subscription-confirmation email to `var.alert_email` — until it is clicked the topic delivers nothing.
+- There is deliberately no CloudTrail trail and no flag for one: `taisei-karate`'s trail is account-wide and already captures this account's management events, and AWS bills only one free copy of those per account. Adding an independent trail here means real HCL (trail + log bucket + bucket policy), not a variable.
