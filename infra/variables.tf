@@ -24,11 +24,9 @@ variable "github_repo" {
     2026, and for any repository renamed or transferred after that date. A rename is not
     what causes it — creation date alone is enough. Older repositories can also opt in.
 
-    MUST be verified before the first apply. `igor-siergiej/portfolio` does not exist
-    yet, so this default is a placeholder that will be wrong the moment the repo is
-    created after the cutover, and every AssumeRoleWithWebIdentity call then fails with
-    'Not authorized to perform sts:AssumeRoleWithWebIdentity' — a message that says
-    nothing about repository names. Create the repo, then run:
+    A wrong value makes every AssumeRoleWithWebIdentity call fail with 'Not authorized
+    to perform sts:AssumeRoleWithWebIdentity' — a message that says nothing about
+    repository names. The default was read from the live repo; to re-verify, run:
 
         gh api repos/OWNER/REPO/actions/oidc/customization/sub
 
@@ -37,7 +35,7 @@ variable "github_repo" {
     `use_immutable_subject` is false does plain 'owner/repo' apply.
   DESC
   type        = string
-  default     = "igor-siergiej/portfolio"
+  default     = "igor-siergiej@79415930/portfolio@1389815265"
 }
 
 variable "price_class" {
