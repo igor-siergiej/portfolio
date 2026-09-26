@@ -215,7 +215,7 @@ data "aws_iam_policy_document" "terraform" {
     ]
   }
 
-  # CloudFront: distribution/OAC/response-headers-policy CRUD. Resource "*" —
+  # CloudFront: distribution/OAC/response-headers-policy/function CRUD. Resource "*" —
   # AWS assigns the ID, so it can't be named before it exists.
   statement {
     sid = "CloudFront"
@@ -231,6 +231,10 @@ data "aws_iam_policy_document" "terraform" {
       "cloudfront:CreateResponseHeadersPolicy",
       "cloudfront:UpdateResponseHeadersPolicy",
       "cloudfront:DeleteResponseHeadersPolicy",
+      "cloudfront:CreateFunction",
+      "cloudfront:UpdateFunction",
+      "cloudfront:DeleteFunction",
+      "cloudfront:PublishFunction",
     ]
     resources = ["*"]
   }

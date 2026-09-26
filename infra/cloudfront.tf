@@ -39,6 +39,34 @@ resource "aws_cloudfront_response_headers_policy" "security_headers" {
   }
 }
 
+# REQUIRED — do not delete. Astro builds directory-format output: `/about` is the object
+# `about/index.html`, `/projects/shoppingo` is `projects/shoppingo/index.html`. A CloudFront
+# S3 REST origin does not resolve directory indexes (default_root_object only covers `/`),
+# so without this rewrite a request for `/about` asks S3 for the key `about`, the OAC-only
+# bucket policy answers 403, and the custom_error_response below serves /404.html. Every
+# route on the site except `/` and the handful of real files at the root (/rss.xml,
+# /cv.pdf, /robots.txt, /sitemap*.xml) would render the 404 page.
+#
+# `astro preview` resolves directory indexes itself, so the e2e suite passes with or
+# without this — the only thing standing between a green CI run and a wholly broken
+# deploy is this function. Removing it breaks production silently.
+resource "aws_cloudfront_function" "directory_index" {
+  name    = "${var.project}-directory-index"
+  runtime = "cloudfront-js-2.0"
+  publish = true
+  code    = <<-JS
+    function handler(event) {
+        var request = event.request;
+        if (request.uri.endsWith('/')) {
+            request.uri += 'index.html';
+        } else if (!request.uri.includes('.')) {
+            request.uri += '/index.html';
+        }
+        return request;
+    }
+  JS
+}
+
 resource "aws_cloudfront_distribution" "site" {
   enabled             = true
   is_ipv6_enabled     = true
@@ -62,6 +90,11 @@ resource "aws_cloudfront_distribution" "site" {
     # Managed-CachingOptimized. Per-object Cache-Control set on upload.
     cache_policy_id            = "658327ea-f89d-4fab-a63d-7e88639e58f6"
     response_headers_policy_id = aws_cloudfront_response_headers_policy.security_headers.id
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.directory_index.arn
+    }
   }
 
   # This is a static multi-page site, not a client-routed SPA: an unknown path is a real
