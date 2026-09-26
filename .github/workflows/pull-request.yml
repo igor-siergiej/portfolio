@@ -65,9 +65,6 @@ jobs:
           restore-keys: bun-${{ runner.os }}-
       - run: bun install
       - run: bunx playwright install --with-deps chromium
-      # dist/ must exist before `bun run preview` can serve it — playwright.config.ts's
-      # webServer doesn't build inline.
-      - run: bun run build
       - run: bun run test:e2e
         env:
           CI: true
