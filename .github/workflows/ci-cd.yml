@@ -63,6 +63,19 @@ jobs:
           key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
           restore-keys: bun-${{ runner.os }}-
       - run: bun install
+      # An unset SITE_URL does not fail the build — Astro falls back to
+      # http://localhost:4321 and ships it as every canonical URL, OG tag, sitemap entry
+      # and RSS link on the live site. No test can catch that: under e2e the expected and
+      # actual origin are both localhost, so the feed assertion passes either way. Fail
+      # here instead, before anything is built or uploaded.
+      - name: Require SITE_URL
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          if [ -z "$SITE_URL" ]; then
+            echo "::error::Repository variable SITE_URL is empty. Every canonical URL, OG tag, sitemap entry and RSS link would ship as http://localhost:4321. Set it with: gh variable set SITE_URL -b 'https://your-domain' (see infra/README.md)."
+            exit 1
+          fi
       - run: bun run build
         env:
           # Without this, every canonical/OG/sitemap/RSS URL in the build falls back to
@@ -143,9 +156,16 @@ jobs:
           # content-hashed, so a replaced image must reach returning visitors well before
           # a year. --delete is scoped to this prefix only, so it cannot remove anything
           # the hashed-assets sync above just uploaded.
-          aws s3 sync dist/images "s3://${{ vars.S3_BUCKET }}/images" \
-            --delete \
-            --cache-control "public, max-age=3600"
+          #
+          # Astro only emits dist/images when public/images holds files, and it holds none
+          # today — sync against a missing path is a hard error, so skip instead.
+          if [ -d dist/images ]; then
+            aws s3 sync dist/images "s3://${{ vars.S3_BUCKET }}/images" \
+              --delete \
+              --cache-control "public, max-age=3600"
+          else
+            echo "dist/images absent — no hand-committed images to upload."
+          fi
       - name: Upload everything else — pages, feeds, robots.txt (no-cache)
         run: |
           # Every page (including nested routes like /blog/first-post/index.html),
