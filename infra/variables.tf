@@ -17,7 +17,25 @@ variable "bucket_name" {
 }
 
 variable "github_repo" {
-  description = "GitHub's OIDC sub-claim prefix for the repo allowed to assume the deploy role. Normally 'owner/repo', but a renamed repo gets an immutable ID-suffixed subject instead — verify with `gh api repos/OWNER/REPO/actions/oidc/customization/sub` before applying, or every AssumeRoleWithWebIdentity call returns 'Not authorized'."
+  description = <<-DESC
+    GitHub's OIDC sub-claim prefix for the repo allowed to assume the deploy role. The
+    tutorial value is 'owner/repo', but GitHub issues an immutable, ID-suffixed subject
+    ('owner@<owner-id>/repo@<repo-id>') for any repository created on or after 15 July
+    2026, and for any repository renamed or transferred after that date. A rename is not
+    what causes it — creation date alone is enough. Older repositories can also opt in.
+
+    MUST be verified before the first apply. `igor-siergiej/portfolio` does not exist
+    yet, so this default is a placeholder that will be wrong the moment the repo is
+    created after the cutover, and every AssumeRoleWithWebIdentity call then fails with
+    'Not authorized to perform sts:AssumeRoleWithWebIdentity' — a message that says
+    nothing about repository names. Create the repo, then run:
+
+        gh api repos/OWNER/REPO/actions/oidc/customization/sub
+
+    and copy `sub_claim_prefix` here verbatim, minus its leading 'repo:'
+    (e.g. 'igor-siergiej@79415930/portfolio@1312344887'). Only if
+    `use_immutable_subject` is false does plain 'owner/repo' apply.
+  DESC
   type        = string
   default     = "igor-siergiej/portfolio"
 }

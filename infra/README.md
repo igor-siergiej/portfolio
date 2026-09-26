@@ -71,6 +71,24 @@ default in `infra/variables.tf`. `backend.tf` can't reference variables, so if y
 stack at a different bucket you must change both by hand or the terraform role's state
 permissions won't match the bucket the backend actually writes to.
 
+Then verify the OIDC subject claim **before** applying. GitHub issues an immutable,
+ID-suffixed subject (`owner@<owner-id>/repo@<repo-id>`) for every repository created on or
+after 15 July 2026, and for any repository renamed or transferred after that date — so the
+committed `github_repo` default of `igor-siergiej/portfolio` is a placeholder that will
+almost certainly be wrong once the repo exists. Create the GitHub repo first, then ask
+GitHub what it will actually send:
+
+```bash
+gh api repos/igor-siergiej/portfolio/actions/oidc/customization/sub
+```
+
+If `use_immutable_subject` is `true`, take the returned `sub_claim_prefix`, strip its
+leading `repo:`, and set that exact string as the `github_repo` default in
+`infra/variables.tf` (`oidc.tf` re-adds the `repo:` prefix itself). Only if
+`use_immutable_subject` is `false` is the plain `owner/repo` form correct. Get this wrong
+and both roles' trust policies silently mismatch: every CI job fails with `Not authorized
+to perform sts:AssumeRoleWithWebIdentity`, a message that never mentions repository names.
+
 ```bash
 cd infra
 terraform init
