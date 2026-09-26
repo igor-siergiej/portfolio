@@ -29,6 +29,6 @@ output "cloudfront_url" {
 }
 
 output "route53_name_servers" {
-  description = "Set these as the NS records at your domain registrar to delegate the domain."
-  value       = aws_route53_zone.site.name_servers
+  description = "Set these as the NS records at your domain registrar to delegate the domain. Null until var.domain_name is set."
+  value       = local.has_domain ? aws_route53_zone.site[0].name_servers : null
 }

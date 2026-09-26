@@ -1,9 +1,14 @@
+# Skipped entirely while no domain is set (local.has_domain, see s3.tf).
 resource "aws_route53_zone" "site" {
+  count = local.has_domain ? 1 : 0
+
   name = var.domain_name
 }
 
 resource "aws_route53_record" "apex_a" {
-  zone_id = aws_route53_zone.site.zone_id
+  count = local.has_domain ? 1 : 0
+
+  zone_id = aws_route53_zone.site[0].zone_id
   name    = var.domain_name
   type    = "A"
 
@@ -15,7 +20,9 @@ resource "aws_route53_record" "apex_a" {
 }
 
 resource "aws_route53_record" "apex_aaaa" {
-  zone_id = aws_route53_zone.site.zone_id
+  count = local.has_domain ? 1 : 0
+
+  zone_id = aws_route53_zone.site[0].zone_id
   name    = var.domain_name
   type    = "AAAA"
 
@@ -27,7 +34,9 @@ resource "aws_route53_record" "apex_aaaa" {
 }
 
 resource "aws_route53_record" "www_a" {
-  zone_id = aws_route53_zone.site.zone_id
+  count = local.has_domain ? 1 : 0
+
+  zone_id = aws_route53_zone.site[0].zone_id
   name    = "www.${var.domain_name}"
   type    = "A"
 
@@ -39,7 +48,9 @@ resource "aws_route53_record" "www_a" {
 }
 
 resource "aws_route53_record" "www_aaaa" {
-  zone_id = aws_route53_zone.site.zone_id
+  count = local.has_domain ? 1 : 0
+
+  zone_id = aws_route53_zone.site[0].zone_id
   name    = "www.${var.domain_name}"
   type    = "AAAA"
 

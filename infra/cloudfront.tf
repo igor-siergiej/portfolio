@@ -45,7 +45,7 @@ resource "aws_cloudfront_distribution" "site" {
   default_root_object = "index.html"
   price_class         = var.price_class
   comment             = var.project
-  aliases             = [var.domain_name, "www.${var.domain_name}"]
+  aliases             = local.has_domain ? [var.domain_name, "www.${var.domain_name}"] : []
 
   origin {
     domain_name              = aws_s3_bucket.site.bucket_regional_domain_name
@@ -88,9 +88,13 @@ resource "aws_cloudfront_distribution" "site" {
     }
   }
 
+  # No domain yet: fall back to CloudFront's default *.cloudfront.net certificate — an
+  # ACM cert can't be issued or validated without a domain to put DNS records on. Once
+  # var.domain_name is set, this switches to the ACM cert instead.
   viewer_certificate {
-    acm_certificate_arn      = aws_acm_certificate_validation.site.certificate_arn
-    ssl_support_method       = "sni-only"
-    minimum_protocol_version = "TLSv1.2_2021"
+    cloudfront_default_certificate = local.has_domain ? null : true
+    acm_certificate_arn            = local.has_domain ? aws_acm_certificate_validation.site[0].certificate_arn : null
+    ssl_support_method             = local.has_domain ? "sni-only" : null
+    minimum_protocol_version       = local.has_domain ? "TLSv1.2_2021" : null
   }
 }

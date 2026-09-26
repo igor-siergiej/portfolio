@@ -29,7 +29,7 @@ variable "price_class" {
 }
 
 variable "domain_name" {
-  description = "Domain to host in Route 53 (delegate NS records here from the registrar)."
+  description = "Domain to host in Route 53 (delegate NS records here from the registrar). Empty (the default) skips ACM and Route 53 entirely and serves the site off its *.cloudfront.net URL with CloudFront's default certificate."
   type        = string
   default     = ""
 }

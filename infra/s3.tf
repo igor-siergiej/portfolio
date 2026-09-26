@@ -3,6 +3,9 @@ data "aws_caller_identity" "current" {}
 locals {
   bucket_name = coalesce(var.bucket_name, "${var.project}-site-${data.aws_caller_identity.current.account_id}")
   origin_id   = "s3-${local.bucket_name}"
+  # No domain yet: skip ACM/Route53 and serve straight off the *.cloudfront.net URL with
+  # CloudFront's default certificate. Set var.domain_name later to turn these back on.
+  has_domain = var.domain_name != ""
 }
 
 resource "aws_s3_bucket" "site" {
