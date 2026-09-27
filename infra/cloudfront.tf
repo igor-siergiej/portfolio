@@ -48,8 +48,9 @@ resource "aws_cloudfront_response_headers_policy" "security_headers" {
 # /cv.pdf, /robots.txt, /sitemap*.xml) would render the 404 page.
 #
 # `astro preview` resolves directory indexes itself, so the e2e suite passes with or
-# without this — the only thing standing between a green CI run and a wholly broken
-# deploy is this function. Removing it breaks production silently.
+# without this. Only the post-deploy smoke test in ci-cd.yml notices it missing, and
+# only on the next site deploy — a terraform apply that removes it breaks production
+# until then.
 resource "aws_cloudfront_function" "directory_index" {
   name    = "${var.project}-directory-index"
   runtime = "cloudfront-js-2.0"

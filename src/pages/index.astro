@@ -70,7 +70,10 @@ const stack = [
     <section class="mt-20">
         <div class="flex items-baseline justify-between border-b border-border pb-4">
             <h2 class="font-display text-2xl tracking-tight">Writing</h2>
-            <a href="/blog" class="font-mono text-xs text-muted-foreground hover:text-primary">Archive · RSS →</a>
+            <span class="font-mono text-xs text-muted-foreground">
+                <a href="/blog" class="hover:text-primary">Archive</a> ·
+                <a href="/rss.xml" class="hover:text-primary">RSS</a> →
+            </span>
         </div>
         <ul>
             {
