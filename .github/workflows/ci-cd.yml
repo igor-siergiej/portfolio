@@ -139,13 +139,15 @@ jobs:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
       - name: Upload hashed assets (immutable)
+        env:
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
         run: |
           # Only content-hashed build output (_astro/*.js, *.css, fonts) is safe to cache
           # forever — Astro's directory-format output means every page is its own
           # index.html at a non-hashed path, so this must be scoped by --include, not by
           # excluding a single root index.html (that pattern only ever matched the SPA's
           # one HTML file, not Astro's per-route index.html/sitemap/rss/robots.txt).
-          aws s3 sync dist "s3://${{ vars.S3_BUCKET }}" \
+          aws s3 sync dist "s3://$S3_BUCKET" \
             --delete \
             --exclude "*" \
             --include "_astro/*" \
@@ -173,18 +175,40 @@ jobs:
             aws s3 rm "s3://$S3_BUCKET/images" --recursive
           fi
       - name: Upload everything else — pages, feeds, robots.txt (no-cache)
+        env:
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
         run: |
           # Every page (including nested routes like /blog/first-post/index.html),
           # sitemap-*.xml, rss.xml, robots.txt and favicon.svg — anything NOT
           # content-hashed — must be revalidated on every request, or a CloudFront
           # invalidation can't reach a visitor's browser cache.
-          aws s3 sync dist "s3://${{ vars.S3_BUCKET }}" \
+          aws s3 sync dist "s3://$S3_BUCKET" \
             --delete \
             --exclude "_astro/*" \
             --exclude "images/*" \
             --cache-control "no-cache, no-store, must-revalidate"
       - name: Invalidate CloudFront
+        env:
+          DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
         run: |
           aws cloudfront create-invalidation \
-            --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --distribution-id "$DISTRIBUTION_ID" \
             --paths "/*"
+      - name: Smoke test production routing
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          # The e2e suite runs against `astro preview`, which resolves directory indexes
+          # itself, so it cannot notice the directory-index CloudFront Function going
+          # missing. Without it every nested route 403s and CloudFront serves /404.html
+          # with a 404 status, which this catches.
+          fail=0
+          for path in / /projects/ /projects/shoppingo/ /blog/ /about /about/ /cv.pdf /rss.xml /robots.txt; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --retry 3 "$SITE_URL$path")
+            echo "$code $path"
+            [ "$code" = 200 ] || fail=1
+          done
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$SITE_URL/smoke-test-missing-page")
+          echo "$code /smoke-test-missing-page"
+          [ "$code" = 404 ] || fail=1
+          exit $fail
