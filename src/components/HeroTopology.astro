@@ -89,7 +89,7 @@ const paths = edges.map(([from, to], index) => {
                     id={path.id}
                     d={path.d}
                     pathLength="1"
-                    class="topo-edge fill-none stroke-primary/45"
+                    class="topo-edge fill-none stroke-foreground/25"
                     stroke-width="1.5"
                     style={`--delay: ${300 + path.layer * 220}ms`}
                 />
@@ -125,7 +125,7 @@ const paths = edges.map(([from, to], index) => {
                             width={w}
                             height={nodeHeight}
                             rx={nodeHeight / 2}
-                            class="fill-card stroke-primary/60"
+                            class="fill-card stroke-foreground/30"
                             stroke-width="1.25"
                         />
                         <circle cx={node.x - w / 2 + 14} cy={y} r="3" class="topo-led fill-primary" />

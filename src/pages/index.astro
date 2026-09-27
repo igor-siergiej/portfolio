@@ -167,8 +167,8 @@ const secondaryButton =
         </section>
     </div>
 
-    <section class="reveal relative mt-28 overflow-hidden rounded-3xl bg-primary px-8 py-16 text-center text-primary-foreground">
-        <svg class="pointer-events-none absolute inset-0 h-full w-full opacity-15" aria-hidden="true">
+    <section class="reveal relative mt-28 overflow-hidden rounded-3xl border border-border bg-card px-8 py-16 text-center">
+        <svg class="pointer-events-none absolute inset-0 h-full w-full text-border" aria-hidden="true">
             <defs>
                 <pattern id="cta-dots" width="18" height="18" patternUnits="userSpaceOnUse">
                     <circle cx="1.5" cy="1.5" r="1.5" fill="currentColor"></circle>
@@ -178,24 +178,15 @@ const secondaryButton =
         </svg>
         <div class="relative">
             <h2 class="font-display text-4xl tracking-tight text-balance sm:text-5xl">Let's build something that stays up.</h2>
-            <p class="mt-4 opacity-80">Email is fastest.</p>
+            <p class="mt-4 text-muted-foreground">Email is fastest.</p>
             <div class="mt-8 flex flex-wrap justify-center gap-3">
-                <a
-                    href={`mailto:${siteConfig.email}`}
-                    class="rounded-full bg-primary-foreground px-6 py-3 text-sm text-primary transition-transform hover:-translate-y-0.5"
-                >
+                <a href={`mailto:${siteConfig.email}`} class={primaryButton}>
                     {siteConfig.email}
                 </a>
-                <a
-                    href={siteConfig.social.github}
-                    class="rounded-full border border-primary-foreground/40 px-6 py-3 text-sm transition-[border-color,transform] hover:-translate-y-0.5 hover:border-primary-foreground"
-                >
+                <a href={siteConfig.social.github} class={secondaryButton}>
                     GitHub
                 </a>
-                <a
-                    href={siteConfig.social.linkedin}
-                    class="rounded-full border border-primary-foreground/40 px-6 py-3 text-sm transition-[border-color,transform] hover:-translate-y-0.5 hover:border-primary-foreground"
-                >
+                <a href={siteConfig.social.linkedin} class={secondaryButton}>
                     LinkedIn
                 </a>
             </div>
