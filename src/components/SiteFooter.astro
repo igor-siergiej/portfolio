@@ -11,7 +11,6 @@ const linkClass =
     <div class="container flex flex-col gap-3 py-8 font-mono text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
         <span>© {year} {siteConfig.name} — built with Astro, deployed on CloudFront</span>
         <nav aria-label="Footer" class="flex gap-5">
-            <a href="/rss.xml" class={linkClass}>RSS</a>
             <a href={siteConfig.social.github} class={linkClass}>GitHub</a>
             <a href={siteConfig.social.linkedin} class={linkClass}>LinkedIn</a>
             <a href={`mailto:${siteConfig.email}`} class={linkClass}>Email</a>

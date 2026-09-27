@@ -1,0 +1,44 @@
+---
+import {
+    DatabaseZap,
+    FolderGit2,
+    Gem,
+    HandFist,
+    KeyRound,
+    Languages,
+    Package,
+    Salad,
+    Server,
+    ShoppingBasket,
+} from 'lucide-react';
+
+interface Props {
+    slug: string;
+    class?: string;
+}
+
+const icons = {
+    shoppingo: ShoppingBasket,
+    'jewellery-catalogue': Gem,
+    foundry: Server,
+    kivo: KeyRound,
+    polylingo: Languages,
+    'diet-planner': Salad,
+    'database-visualiser': DatabaseZap,
+    utils: Package,
+    'taisei-karate': HandFist,
+};
+
+const { slug, class: className } = Astro.props;
+const Icon = icons[slug as keyof typeof icons] ?? FolderGit2;
+---
+
+<span
+    class:list={[
+        'project-icon grid size-14 shrink-0 place-items-center rounded-2xl bg-accent text-accent-foreground transition-[transform,background-color,color] duration-300 ease-out',
+        className,
+    ]}
+    aria-hidden="true"
+>
+    <Icon className="size-6" strokeWidth={1.6} />
+</span>

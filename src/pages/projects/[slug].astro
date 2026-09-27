@@ -1,6 +1,7 @@
 ---
 import { getCollection, getEntry, render } from 'astro:content';
 import JsonLd from '@/components/JsonLd.astro';
+import ProjectIcon from '@/components/ProjectIcon.astro';
 import StackChips from '@/components/StackChips.astro';
 import { siteConfig } from '@/config/site';
 import Layout from '@/layouts/Layout.astro';
@@ -35,8 +36,15 @@ const pageUrl = new URL(Astro.url.pathname, siteConfig.url).toString();
         }}
     />
     <article>
-        <p class="font-mono text-xs text-muted-foreground">{project.data.period} · {project.data.role}</p>
-        <h1 class="mt-4 font-display text-4xl leading-tight tracking-tight">{project.data.title}</h1>
+        <div class="flex items-center gap-4">
+            <ProjectIcon slug={project.id} />
+            <p class="font-mono text-xs leading-5 text-muted-foreground">
+                {project.data.period}
+                <br />
+                {project.data.role}
+            </p>
+        </div>
+        <h1 class="mt-6 font-display text-5xl leading-tight tracking-tight">{project.data.title}</h1>
         <p class="mt-4 text-lg text-muted-foreground">{project.data.summary}</p>
 
         <div class="mt-6"><StackChips items={project.data.stack} /></div>

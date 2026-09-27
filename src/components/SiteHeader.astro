@@ -11,7 +11,7 @@ const links = [
 
 const path = Astro.url.pathname;
 
-// The wordmark sets the surname in italic primary, so it needs the name in two pieces —
+// The wordmark sets the surname in primary, so it needs the name in two pieces —
 // taken from `siteConfig.name` rather than retyped, which would be a second source of truth.
 const [givenName, ...surname] = siteConfig.name.split(' ');
 
@@ -26,7 +26,7 @@ const textFocusRing = `${focusRing} focus-visible:rounded-sm`;
 <header class="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
     <div class="container flex h-18 items-center justify-between gap-6">
         <a href="/" class:list={['font-display text-xl font-semibold tracking-tight', textFocusRing]}>
-            {givenName} <span class="text-primary italic">{surname.join(' ')}</span>
+            {givenName} <span class="text-primary">{surname.join(' ')}</span>
         </a>
         <nav aria-label="Primary" class="hidden items-center gap-7 text-sm sm:flex">
             {

@@ -66,6 +66,9 @@
     --color-card: var(--card);
     --color-foreground: var(--foreground);
     --color-background: var(--background);
+    --color-pollen: var(--pollen);
+    --color-canopy: var(--canopy);
+    --color-canopy-foreground: var(--canopy-foreground);
     --radius-sm: calc(var(--radius) * 0.6);
     --radius-md: calc(var(--radius) * 0.8);
     --radius-lg: var(--radius);
@@ -76,46 +79,52 @@
 }
 
 :root {
-    --radius: 0.25rem;
-    --background: oklch(0.977 0.006 85);
-    --foreground: oklch(0.18 0.012 75);
+    --radius: 0.5rem;
+    --background: oklch(0.982 0.003 150);
+    --foreground: oklch(0.22 0.012 160);
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.18 0.012 75);
+    --card-foreground: oklch(0.22 0.012 160);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.18 0.012 75);
-    --primary: oklch(0.52 0.15 40);
-    --primary-foreground: oklch(0.99 0.005 85);
-    --secondary: oklch(0.95 0.008 85);
-    --secondary-foreground: oklch(0.26 0.012 75);
-    --muted: oklch(0.95 0.008 85);
-    --muted-foreground: oklch(0.52 0.012 75);
-    --accent: oklch(0.95 0.02 50);
-    --accent-foreground: oklch(0.32 0.08 40);
+    --popover-foreground: oklch(0.22 0.012 160);
+    --primary: oklch(0.5 0.115 153);
+    --primary-foreground: oklch(0.985 0.003 150);
+    --secondary: oklch(0.955 0.004 150);
+    --secondary-foreground: oklch(0.27 0.012 160);
+    --muted: oklch(0.955 0.004 150);
+    --muted-foreground: oklch(0.5 0.012 160);
+    --accent: oklch(0.94 0.04 150);
+    --accent-foreground: oklch(0.4 0.1 153);
     --destructive: oklch(0.55 0.19 27);
-    --border: oklch(0.9 0.008 85);
-    --input: oklch(0.9 0.008 85);
-    --ring: oklch(0.52 0.15 40);
+    --border: oklch(0.9 0.005 150);
+    --input: oklch(0.9 0.005 150);
+    --ring: oklch(0.5 0.115 153);
+    --pollen: oklch(0.78 0.14 85);
+    --canopy: oklch(0.24 0.012 160);
+    --canopy-foreground: oklch(0.96 0.004 150);
 }
 
 .dark {
-    --background: oklch(0.16 0.008 75);
-    --foreground: oklch(0.94 0.006 85);
-    --card: oklch(0.2 0.009 75);
-    --card-foreground: oklch(0.94 0.006 85);
-    --popover: oklch(0.2 0.009 75);
-    --popover-foreground: oklch(0.94 0.006 85);
-    --primary: oklch(0.72 0.13 45);
-    --primary-foreground: oklch(0.16 0.008 75);
-    --secondary: oklch(0.26 0.009 75);
-    --secondary-foreground: oklch(0.94 0.006 85);
-    --muted: oklch(0.26 0.009 75);
-    --muted-foreground: oklch(0.68 0.01 80);
-    --accent: oklch(0.3 0.03 45);
-    --accent-foreground: oklch(0.9 0.04 60);
+    --background: oklch(0.17 0.006 160);
+    --foreground: oklch(0.95 0.004 150);
+    --card: oklch(0.21 0.007 160);
+    --card-foreground: oklch(0.95 0.004 150);
+    --popover: oklch(0.21 0.007 160);
+    --popover-foreground: oklch(0.95 0.004 150);
+    --primary: oklch(0.8 0.13 150);
+    --primary-foreground: oklch(0.17 0.006 160);
+    --secondary: oklch(0.25 0.007 160);
+    --secondary-foreground: oklch(0.95 0.004 150);
+    --muted: oklch(0.25 0.007 160);
+    --muted-foreground: oklch(0.71 0.008 150);
+    --accent: oklch(0.27 0.045 153);
+    --accent-foreground: oklch(0.85 0.1 150);
     --destructive: oklch(0.62 0.18 27);
-    --border: oklch(0.29 0.009 75);
-    --input: oklch(0.29 0.009 75);
-    --ring: oklch(0.72 0.13 45);
+    --border: oklch(0.29 0.008 160);
+    --input: oklch(0.29 0.008 160);
+    --ring: oklch(0.8 0.13 150);
+    --pollen: oklch(0.84 0.14 88);
+    --canopy: oklch(0.22 0.008 160);
+    --canopy-foreground: oklch(0.96 0.004 150);
 }
 
 @layer base {
@@ -138,10 +147,30 @@
     margin-top: 1.25rem;
 }
 .prose-content h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
     font-family: var(--font-display);
     font-size: 1.75rem;
     letter-spacing: -0.02em;
     margin-top: 3rem;
+}
+.prose-content h2::before {
+    content: "";
+    flex-shrink: 0;
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: 0.2rem;
+    background: var(--primary);
+    transform: rotate(45deg);
+}
+.prose-content > h2:first-child,
+.prose-content > article > h2:first-child {
+    border-top: 0;
+    padding-top: 0;
+    margin-top: 0;
 }
 .prose-content h3 {
     font-family: var(--font-display);
@@ -199,4 +228,49 @@
     border-left: 2px solid var(--primary);
     padding-left: 1rem;
     color: var(--muted-foreground);
+}
+
+/* Scroll-linked reveal: runs off the view timeline, so it costs no JS and simply doesn't
+   apply in browsers without `animation-timeline` or when reduced motion is requested. */
+@media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+        .reveal {
+            animation: reveal-rise linear both;
+            animation-timeline: view();
+            animation-range: entry 0% entry 60%;
+        }
+    }
+}
+@keyframes reveal-rise {
+    from {
+        opacity: 0;
+        transform: translateY(2rem);
+    }
+}
+
+@keyframes pulse-ring {
+    0% {
+        transform: scale(1);
+        opacity: 0.6;
+    }
+    100% {
+        transform: scale(2.6);
+        opacity: 0;
+    }
+}
+.status-dot {
+    position: relative;
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: var(--primary);
+}
+.status-dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: inherit;
+    animation: pulse-ring 2.2s ease-out infinite;
 }
