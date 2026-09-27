@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/igor-siergiej/portfolio/compare/v1.0.1...v1.1.0) (2026-09-27)
+
+
+### Features
+
+* green redesign with animated stack diagram and icons ([e87733c](https://github.com/igor-siergiej/portfolio/commit/e87733c54fa5bb78d35680e7d4a0bfc128103228))
+
 ## [1.0.1](https://github.com/igor-siergiej/portfolio/compare/v1.0.0...v1.0.1) (2026-09-27)
 
 
