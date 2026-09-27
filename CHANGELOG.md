@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/igor-siergiej/portfolio/compare/v1.0.0...v1.0.1) (2026-09-27)
+
+
+### Bug Fixes
+
+* close handoff follow-ups ([93119c7](https://github.com/igor-siergiej/portfolio/commit/93119c7e468b23134b7034e8fd84127c2299f8c0))
+
 # 1.0.0 (2026-09-26)
 
 
