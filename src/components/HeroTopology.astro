@@ -1,0 +1,191 @@
+---
+// A request's path through the stack, top to bottom: each layer is drawn in turn on load,
+// then packets keep travelling the edges. Positions are hand-placed in viewBox units.
+interface Node {
+    id: string;
+    label: string;
+    x: number;
+    layer: number;
+}
+
+const layers = ['Interface', 'Services', 'Data', 'Platform'];
+const layerY = [52, 152, 252, 352];
+const nodeHeight = 32;
+
+const nodes: Node[] = [
+    { id: 'react', label: 'React 19', x: 150, layer: 0 },
+    { id: 'astro', label: 'Astro', x: 350, layer: 0 },
+    { id: 'hono', label: 'Hono API', x: 110, layer: 1 },
+    { id: 'kivo', label: 'kivo auth', x: 255, layer: 1 },
+    { id: 'lambda', label: 'Lambda', x: 395, layer: 1 },
+    { id: 'mongo', label: 'MongoDB', x: 140, layer: 2 },
+    { id: 'minio', label: 'MinIO', x: 290, layer: 2 },
+    { id: 'foundry', label: 'foundry', x: 170, layer: 3 },
+    { id: 'aws', label: 'AWS', x: 370, layer: 3 },
+];
+
+const edges: [string, string][] = [
+    ['react', 'hono'],
+    ['react', 'kivo'],
+    ['astro', 'lambda'],
+    ['hono', 'kivo'],
+    ['hono', 'mongo'],
+    ['hono', 'minio'],
+    ['kivo', 'mongo'],
+    ['mongo', 'foundry'],
+    ['minio', 'foundry'],
+    ['lambda', 'aws'],
+    ['astro', 'aws'],
+];
+
+const byId = new Map(nodes.map((node) => [node.id, node]));
+const width = (label: string) => label.length * 7.4 + 30;
+
+const paths = edges.map(([from, to], index) => {
+    const a = byId.get(from);
+    const b = byId.get(to);
+    if (!a || !b) throw new Error(`Unknown edge ${from} → ${to}`);
+    const ay = layerY[a.layer];
+    const by = layerY[b.layer];
+    // Same-layer edges arc underneath instead of cutting through the pills.
+    const d =
+        a.layer === b.layer
+            ? `M ${a.x + width(a.label) / 2} ${ay} C ${a.x + 60} ${ay + 34}, ${b.x - 60} ${by + 34}, ${b.x - width(b.label) / 2} ${by}`
+            : `M ${a.x} ${ay + nodeHeight / 2} C ${a.x} ${ay + 58}, ${b.x} ${by - 58}, ${b.x} ${by - nodeHeight / 2}`;
+    return { d, id: `edge-${index}`, layer: Math.min(a.layer, b.layer) };
+});
+---
+
+<figure class="topology relative" aria-label="Diagram of the stack I build and run, from interface to platform">
+    <svg viewBox="0 0 480 400" class="h-auto w-full overflow-visible" role="img" aria-hidden="true">
+        <defs>
+            <pattern id="topology-dots" width="16" height="16" patternUnits="userSpaceOnUse">
+                <circle cx="1" cy="1" r="1" class="fill-border"></circle>
+            </pattern>
+        </defs>
+        <rect x="0" y="0" width="480" height="400" rx="24" fill="url(#topology-dots)"></rect>
+
+        {
+            layers.map((label, index) => (
+                <g class="topo-layer" style={`--delay: ${index * 180}ms`}>
+                    <line
+                        x1="16"
+                        x2="464"
+                        y1={layerY[index] + 48}
+                        y2={layerY[index] + 48}
+                        class="stroke-border"
+                        stroke-dasharray="2 6"
+                    />
+                    <text x="16" y={layerY[index] + 4} class="fill-muted-foreground font-sans text-[11px]">
+                        {label}
+                    </text>
+                </g>
+            ))
+        }
+
+        {
+            paths.map((path) => (
+                <path
+                    id={path.id}
+                    d={path.d}
+                    pathLength="1"
+                    class="topo-edge fill-none stroke-primary/45"
+                    stroke-width="1.5"
+                    style={`--delay: ${300 + path.layer * 220}ms`}
+                />
+            ))
+        }
+
+        {
+            paths.map((path, index) => (
+                <circle r="3" class="topo-packet fill-pollen">
+                    <animateMotion
+                        dur={`${2.4 + (index % 4) * 0.5}s`}
+                        begin={`${-index * 0.61}s`}
+                        repeatCount="indefinite"
+                        keyPoints="0;1"
+                        keyTimes="0;1"
+                        calcMode="linear"
+                    >
+                        <mpath href={`#${path.id}`} />
+                    </animateMotion>
+                </circle>
+            ))
+        }
+
+        {
+            nodes.map((node) => {
+                const w = width(node.label);
+                const y = layerY[node.layer];
+                return (
+                    <g class="topo-node" style={`--delay: ${node.layer * 220}ms`}>
+                        <rect
+                            x={node.x - w / 2}
+                            y={y - nodeHeight / 2}
+                            width={w}
+                            height={nodeHeight}
+                            rx={nodeHeight / 2}
+                            class="fill-card stroke-primary/60"
+                            stroke-width="1.25"
+                        />
+                        <circle cx={node.x - w / 2 + 14} cy={y} r="3" class="topo-led fill-primary" />
+                        <text
+                            x={node.x + 7}
+                            y={y + 4}
+                            text-anchor="middle"
+                            class="fill-foreground font-mono text-[12px]"
+                        >
+                            {node.label}
+                        </text>
+                    </g>
+                );
+            })
+        }
+    </svg>
+</figure>
+
+<style>
+    .topo-packet {
+        opacity: 0;
+    }
+    @media (prefers-reduced-motion: no-preference) {
+        .topo-layer,
+        .topo-node {
+            animation: topo-fade 600ms cubic-bezier(0.2, 0.7, 0.2, 1) var(--delay) both;
+            transform-box: fill-box;
+            transform-origin: center;
+        }
+        .topo-edge {
+            stroke-dasharray: 1;
+            stroke-dashoffset: 1;
+            animation: topo-draw 900ms ease-out var(--delay) forwards;
+        }
+        .topo-packet {
+            animation: topo-show 400ms ease-out 1.3s forwards;
+        }
+        .topo-led {
+            animation: topo-blink 3s ease-in-out infinite;
+        }
+    }
+    @keyframes topo-fade {
+        from {
+            opacity: 0;
+            transform: translateY(8px) scale(0.94);
+        }
+    }
+    @keyframes topo-draw {
+        to {
+            stroke-dashoffset: 0;
+        }
+    }
+    @keyframes topo-show {
+        to {
+            opacity: 1;
+        }
+    }
+    @keyframes topo-blink {
+        50% {
+            opacity: 0.35;
+        }
+    }
+</style>
