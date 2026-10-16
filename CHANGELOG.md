@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/igor-siergiej/portfolio/compare/v1.1.0...v1.2.0) (2026-10-16)
+
+
+### Features
+
+* **content:** add /resume page built from a content collection ([#6](https://github.com/igor-siergiej/portfolio/issues/6)) ([c358921](https://github.com/igor-siergiej/portfolio/commit/c3589219111414fd657b93ab7f21f12767c592ee))
+
 # [1.1.0](https://github.com/igor-siergiej/portfolio/compare/v1.0.1...v1.1.0) (2026-09-27)
 
 
