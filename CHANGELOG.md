@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/igor-siergiej/portfolio/compare/v1.2.0...v1.3.0) (2026-10-16)
+
+
+### Features
+
+* **seo:** per-page OG image via dynamic SVG endpoint ([#7](https://github.com/igor-siergiej/portfolio/issues/7)) ([c18dead](https://github.com/igor-siergiej/portfolio/commit/c18deadd763fd82c222f1abafb2bf01ec86770d3))
+
 # [1.2.0](https://github.com/igor-siergiej/portfolio/compare/v1.1.0...v1.2.0) (2026-10-16)
 
 
