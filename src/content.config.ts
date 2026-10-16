@@ -31,4 +31,40 @@ const projects = defineCollection({
     }),
 });
 
-export const collections = { posts, projects };
+// Resume is a singleton collection (single file `profile.md` in `src/content/resume/`).
+// The schema is option A from the spec: experience / education / skills are
+// `{ items: [...] }` arrays so the page can render them in any order.
+const resume = defineCollection({
+    loader: glob({ pattern: 'profile.md', base: './src/content/resume' }),
+    schema: z.object({
+        title: z.string(),
+        headline: z.string(),
+        location: z.string().optional(),
+        summary: z.string(),
+        experience: z.array(
+            z.object({
+                company: z.string(),
+                role: z.string(),
+                period: z.string(),
+                location: z.string().optional(),
+                highlights: z.array(z.string()).default([]),
+            })
+        ),
+        skills: z.array(
+            z.object({
+                category: z.string(),
+                items: z.array(z.string()),
+            })
+        ),
+        education: z.array(
+            z.object({
+                institution: z.string(),
+                qualification: z.string(),
+                period: z.string(),
+                details: z.string().optional(),
+            })
+        ),
+    }),
+});
+
+export const collections = { posts, projects, resume };
