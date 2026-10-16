@@ -8,10 +8,20 @@ interface Props {
     noindex?: boolean;
 }
 
-const { title, description = siteConfig.description, image = siteConfig.defaultOgImage, noindex = false } = Astro.props;
+const { title, description = siteConfig.description, image, noindex = false } = Astro.props;
+
+// Per-page OG image by default: the dynamic SVG endpoint renders the page
+// title into a branded card. Pass `image` explicitly to override (e.g. blog
+// post covers). Falls back to siteConfig.defaultOgImage (the legacy PNG)
+// if the title is empty.
+const ogImage =
+    image ??
+    (title
+        ? `/og.svg?title=${encodeURIComponent(title)}&subtitle=${encodeURIComponent(description)}`
+        : siteConfig.defaultOgImage);
 
 const canonicalUrl = new URL(Astro.url.pathname, siteConfig.url).toString();
-const imageUrl = new URL(image, siteConfig.url).toString();
+const imageUrl = new URL(ogImage, siteConfig.url).toString();
 const fullTitle = title === siteConfig.name ? title : `${title} | ${siteConfig.name}`;
 ---
 
@@ -25,6 +35,9 @@ const fullTitle = title === siteConfig.name ? title : `${title} | ${siteConfig.n
 <meta property="og:description" content={description} />
 <meta property="og:url" content={canonicalUrl} />
 <meta property="og:image" content={imageUrl} />
+<meta property="og:image:type" content={ogImage.endsWith('.svg') ? 'image/svg+xml' : 'image/png'} />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
 <meta property="og:site_name" content={siteConfig.name} />
 
 <meta name="twitter:card" content="summary_large_image" />
