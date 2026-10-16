@@ -274,3 +274,65 @@
     background: inherit;
     animation: pulse-ring 2.2s ease-out infinite;
 }
+
+/* Print stylesheet for /resume. window.print() renders the same page; the
+   `@media print` rules below strip the site chrome, drop backgrounds, and
+   lay the content out on A4 so the saved PDF is publication-ready without a
+   separate "PDF generation" pass. */
+@media print {
+    @page {
+        size: A4;
+        margin: 14mm 16mm;
+    }
+    html {
+        background: #fff !important;
+        color: #000 !important;
+    }
+    body {
+        background: #fff !important;
+        color: #000 !important;
+        font-size: 10.5pt;
+        line-height: 1.45;
+    }
+    /* Strip the site header, footer, and the hero topology from the print run
+       — only the resume article survives. The print:hidden utility on the
+       download button handles itself; we hide SiteHeader/SiteFooter via
+       their own attribute selectors instead. */
+    site-header,
+    site-footer,
+    .site-header,
+    .site-footer,
+    nav[aria-label="Primary"],
+    footer {
+        display: none !important;
+    }
+    a {
+        color: inherit !important;
+        text-decoration: none !important;
+    }
+    a[href^="http"]::after,
+    a[href^="mailto:"]::after {
+        content: "";
+    }
+    h1 {
+        font-size: 22pt;
+    }
+    h2 {
+        font-size: 10.5pt;
+        letter-spacing: 0.08em;
+    }
+    h3 {
+        font-size: 11pt;
+    }
+    /* Page break hints so a single role doesn't straddle a sheet boundary. */
+    section {
+        break-inside: avoid;
+    }
+    h3 {
+        break-after: avoid;
+    }
+    /* Drop reveal/scroll-linked animations; they only cost paint cycles on paper. */
+    .reveal {
+        animation: none !important;
+    }
+}
