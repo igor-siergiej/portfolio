@@ -45,6 +45,7 @@ jobs:
       # tsc sees those as untyped and every field access becomes an implicit `any`.
       - run: bunx astro sync
       - run: bun run tsc --noEmit
+      - run: bun run typecheck
       - run: bun run test
 
   e2e:
