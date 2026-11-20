@@ -30,6 +30,8 @@ const icons = {
 };
 
 const { slug, class: className } = Astro.props;
+
+// SAFETY: unknown slugs index to undefined and use the generic folder icon below.
 const Icon = icons[slug as keyof typeof icons] ?? FolderGit2;
 ---
 

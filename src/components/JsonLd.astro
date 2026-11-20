@@ -1,6 +1,8 @@
 ---
+type SchemaValue = string | number | boolean | null | undefined | SchemaValue[] | { [key: string]: SchemaValue };
+
 interface Props {
-    schema: Record<string, unknown>;
+    schema: { [key: string]: SchemaValue };
 }
 
 const { schema } = Astro.props;

@@ -4,9 +4,11 @@ import Layout from '@/layouts/Layout.astro';
 import { siteConfig } from '@/config/site';
 
 const resume = await getEntry('resume', 'profile');
+
 if (!resume) {
     throw new Error('Resume profile not found at src/content/resume/profile.md');
 }
+
 const { headline, location, summary, experience, skills, education } = resume.data;
 
 // Print-stylesheet approach: the same page renders the on-screen and the PDF

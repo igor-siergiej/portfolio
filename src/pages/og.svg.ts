@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+
 import { siteConfig } from '@/config/site';
 
 // Dynamic OG image as SVG. Title and subtitle come from query params; the
@@ -18,18 +19,23 @@ const xmlEscape = (value: string): string =>
 
 const pushLine = (lines: string[], current: string, word: string, maxChars: number): string => {
     if (!current) return word;
+
     if (`${current} ${word}`.length <= maxChars) return `${current} ${word}`;
     lines.push(current);
+
     return word;
 };
 
 const wrap = (text: string, maxChars: number): string[] => {
     const lines: string[] = [];
     let current = '';
+
     for (const word of text.split(/\s+/)) {
         current = pushLine(lines, current, word, maxChars);
     }
+
     if (current) lines.push(current);
+
     return lines.slice(0, 4);
 };
 
@@ -72,6 +78,7 @@ const renderCard = (title: string, subtitle: string): string => {
 
 const readParam = (url: URL, name: string, fallback: string): string => {
     const value = (url.searchParams.get(name) ?? fallback).trim();
+
     return value || fallback;
 };
 

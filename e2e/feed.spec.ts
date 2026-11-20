@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+
 import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
@@ -23,12 +24,14 @@ function readPosts(): PostFrontmatter[] {
         .map((file) => {
             const source = readFileSync(join(postsDir, file), 'utf8');
             const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---/.exec(source)?.[1];
+
             if (!frontmatter) throw new Error(`No frontmatter in ${file}`);
 
             const title = /^title:\s*(.+)$/m
                 .exec(frontmatter)?.[1]
                 ?.trim()
                 .replace(/^['"]|['"]$/g, '');
+
             if (!title) throw new Error(`No title in ${file}`);
 
             return { title, draft: /^draft:\s*true\s*$/m.test(frontmatter) };

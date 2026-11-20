@@ -18,6 +18,7 @@ const [givenName, ...surname] = siteConfig.name.split(' ');
 // `outline-2` also sets `outline-style: solid`, which the UA's `outline-style: auto` ring does
 // not, and Chromium ignores `outline-color` while the style is `auto`.
 const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+
 // Square-cornered links get a hair of radius so the ring doesn't read as a hard box; the CV
 // pill is left alone because a `rounded-sm` on focus would square off its own border.
 const textFocusRing = `${focusRing} focus-visible:rounded-sm`;

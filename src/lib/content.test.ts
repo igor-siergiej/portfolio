@@ -1,15 +1,23 @@
 import type { CollectionEntry } from 'astro:content';
 import { describe, expect, it } from 'vitest';
+
 import { featuredProjects, orderedProjects, publishedPosts } from './content';
 
-const post = (id: string, publishDate: string, draft = false) =>
-    ({
-        id,
-        data: { title: id, publishDate: new Date(publishDate), draft, tags: [] },
-    }) as unknown as CollectionEntry<'posts'>;
+const post = (id: string, publishDate: string, draft = false): CollectionEntry<'posts'> => ({
+    id,
+    collection: 'posts',
+    data: { title: id, publishDate: new Date(publishDate), draft, tags: [] },
+});
 
-const project = (id: string, status: string, featured?: number) =>
-    ({ id, data: { title: id, status, featured, stack: [] } }) as unknown as CollectionEntry<'projects'>;
+const project = (
+    id: string,
+    status: CollectionEntry<'projects'>['data']['status'],
+    featured?: number
+): CollectionEntry<'projects'> => ({
+    id,
+    collection: 'projects',
+    data: { title: id, summary: id, role: 'Engineer', period: '2026', status, featured, stack: [], screenshots: [] },
+});
 
 describe('publishedPosts', () => {
     it('removes drafts', () => {
@@ -42,6 +50,7 @@ describe('orderedProjects', () => {
             project('kept', 'maintained'),
             project('live', 'active'),
         ]);
+
         expect(result.map((p) => p.id)).toEqual(['live', 'kept', 'old']);
     });
 
