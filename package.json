@@ -41,7 +41,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "test": "vitest run",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright install chromium && playwright test",
     "lint": "oxlint && oxfmt --check",
     "lint:fix": "node scripts/lint-fix.mjs",
     "format": "oxfmt --write",

@@ -9,6 +9,8 @@
   hooks apply fixes and formatting; `format:check` checks formatting alone.
   Retain generated-file boundaries and project rule allowances, and document
   Astro/Markdoc parser limits. Require Node >=22.22.1 and Bun >=1.4.4.
+- Make `test:e2e` install the matching Playwright Chromium before running tests,
+  so fresh runner browser caches do not fail at browser launch.
 
 # [1.3.0](https://github.com/igor-siergiej/portfolio/compare/v1.2.0...v1.3.0) (2026-10-16)
 
