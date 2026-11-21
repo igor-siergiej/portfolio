@@ -62,13 +62,16 @@ copying version examples from its README; keep Oxlint and its JS-plugin runtime
 aligned and regenerate `bun.lock`.
 
 - `lint` never writes; CI's existing `bun run lint` now checks both lint and formatting.
+  CI pins Node 22 (`actions/setup-node`) alongside Bun, since the Oxlint JS-plugin
+  runtime and `.mts` config loading use the `node` on `PATH`.
 - `lint:fix` uses `scripts/lint-fix.mjs`: two lint-fix passes, formatting, then a
   final read-only lint. Native fixes such as `prefer-const` can expose a JS-plugin
   spacing fix on the next pass. Unresolved errors still fail the command.
 - Husky runs lint-staged: staged JS/TS and Astro files use that same fixer; supported
   non-code files use Oxfmt. Both tools respect `.gitignore`; the configs also
-  exclude `.factory`, `dist`, `.astro`, coverage, Playwright output and generated
-  Markdoc timestamp modules, while retaining shared agent-directory exclusions.
+  exclude `.factory`, `dist`, `.astro`, coverage, Playwright output, generated
+  Markdoc timestamp modules and `CHANGELOG.md` (semantic-release rewrites it in its
+  own format, so formatting it would fail `lint` after the next release), while retaining shared agent-directory exclusions.
 - Shared four-space/120-column/single-quote/semicolon formatting and import
   sorting match the previous project style; JSON and YAML use two spaces.
   `one-var: never` preserves single declarations. The source-specific allowances

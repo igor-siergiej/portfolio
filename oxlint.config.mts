@@ -28,6 +28,10 @@ export default defineConfig({
             },
         },
         {
+            files: ['src/env.d.ts'],
+            rules: { 'typescript/triple-slash-reference': 'off' },
+        },
+        {
             files: ['src/content.config.ts'],
             rules: { 'typescript/ban-ts-comment': 'off' },
         },

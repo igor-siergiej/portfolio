@@ -6,6 +6,7 @@ export default defineConfig({
     ignorePatterns: [
         ...(shared.ignorePatterns ?? []),
         '.factory/**',
+        'CHANGELOG.md',
         'dist/**',
         '.astro/**',
         'coverage/**',
