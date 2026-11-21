@@ -46,7 +46,7 @@ bun run format        # write formatting only (including import sorting)
 bun run format:check  # read-only formatting check
 bun run typecheck     # Astro template/content/TypeScript checks
 bun run test          # vitest
-bun run test:e2e      # install matching Chromium if missing, then run Playwright
+bun run test:e2e      # playwright
 ```
 
 ## Tooling
@@ -97,11 +97,6 @@ replaced with a claim of template coverage.
   `bun run build && bun run preview`, so it tests the static build — but `astro preview`
   resolves directory indexes itself, so CloudFront routing is only covered by the
   post-deploy smoke test in `ci-cd.yml`.
-  `test:e2e` first runs `playwright install chromium`, using the installed Playwright
-  version and its browser cache. Fresh runner homes therefore need network access
-  for the initial download; cached browsers are reused. On Linux hosts missing
-  browser system libraries, provision them with `bunx playwright install --with-deps chromium`
-  (may require administrator access); GitHub CI already does this.
 - PRs run `.github/workflows/pull-request.yml`.
 
 ## Content
