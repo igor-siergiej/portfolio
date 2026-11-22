@@ -10,13 +10,16 @@ export const prerender = true;
 
 export async function getStaticPaths() {
     const projects = await getCollection('projects');
+
     return projects.map((project) => ({ params: { slug: project.id } }));
 }
 
 const { slug } = Astro.params;
+
 if (!slug) throw new Error('Slug not found');
 
 const project = await getEntry('projects', slug);
+
 if (!project) throw new Error(`No project found for slug: ${slug}`);
 
 const { Content } = await render(project);

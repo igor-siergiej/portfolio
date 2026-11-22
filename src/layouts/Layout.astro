@@ -35,6 +35,7 @@ const personSchema = {
 		<script is:inline>
 			const stored = localStorage.getItem('theme');
 			const isDark = stored ? stored === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+
 			document.documentElement.classList.toggle('dark', isDark);
 		</script>
 		<Seo title={title} description={description} image={image} />

@@ -3,6 +3,7 @@ import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'astro/config';
+
 import { shikiConfig } from './src/config/shiki.mjs';
 
 // https://astro.build/config

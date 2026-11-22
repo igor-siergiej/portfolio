@@ -1,3 +1,16 @@
+## Tooling: Biome replaced by shared Oxlint and Oxfmt (2026-11-22)
+
+- Linting and formatting now use the shared `@imapps/oxc-config` **9.0.0** presets
+  (`/oxlint`, `/oxfmt`, including the anti-slop plugin) with Oxlint 1.94.0,
+  @oxlint/plugins 1.94.0 and Oxfmt 0.79.0. `@biomejs/biome` and `biome.json` are removed.
+- Commands: `bun run lint` (read-only lint + format check), `bun run lint:fix`
+  (fix lint, format, re-lint), `bun run format` (write formatting),
+  `bun run format:check`. Husky/lint-staged and the CI workflows use the same setup.
+- Requires Node >=22.22.1 and Bun >=1.4.4; CI pins Node 22 alongside Bun.
+- Oxlint covers JS/TS and the script/frontmatter of `.astro` files only; it does not lint
+  Astro templates, and Oxfmt leaves `.astro` files unchanged. See the README Tooling section.
+- `CHANGELOG.md` is excluded from Oxfmt because semantic-release owns its format.
+
 # [1.3.0](https://github.com/igor-siergiej/portfolio/compare/v1.2.0...v1.3.0) (2026-10-16)
 
 

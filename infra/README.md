@@ -98,7 +98,7 @@ terraform apply
 ## Wire up CI deploy
 
 `terraform apply` prints the outputs below. Set them as **GitHub repository variables**
-(Settings → Secrets and variables → Actions → *Variables*), or:
+(Settings → Secrets and variables → Actions → _Variables_), or:
 
 ```bash
 gh variable set S3_BUCKET                 -b "$(terraform output -raw bucket_name)"

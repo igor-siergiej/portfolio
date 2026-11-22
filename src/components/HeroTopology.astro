@@ -44,14 +44,17 @@ const width = (label: string) => label.length * 7.4 + 30;
 const paths = edges.map(([from, to], index) => {
     const a = byId.get(from);
     const b = byId.get(to);
+
     if (!a || !b) throw new Error(`Unknown edge ${from} → ${to}`);
     const ay = layerY[a.layer];
     const by = layerY[b.layer];
+
     // Same-layer edges arc underneath instead of cutting through the pills.
     const d =
         a.layer === b.layer
             ? `M ${a.x + width(a.label) / 2} ${ay} C ${a.x + 60} ${ay + 34}, ${b.x - 60} ${by + 34}, ${b.x - width(b.label) / 2} ${by}`
             : `M ${a.x} ${ay + nodeHeight / 2} C ${a.x} ${ay + 58}, ${b.x} ${by - 58}, ${b.x} ${by - nodeHeight / 2}`;
+
     return { d, id: `edge-${index}`, layer: Math.min(a.layer, b.layer) };
 });
 ---
