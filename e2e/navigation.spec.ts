@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('home reaches a case study and links back to the index', async ({ page }) => {
+test('home reaches a case study and links back to the index', { tag: '@smoke' }, async ({ page }) => {
     await page.goto('/');
     await page.getByRole('link', { name: 'See selected work' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Projects' })).toBeVisible();
@@ -21,7 +21,7 @@ test('home reaches a case study and links back to the index', async ({ page }) =
     await expect(page.getByRole('heading', { level: 1, name: 'Projects' })).toBeVisible();
 });
 
-test('blog index reaches a published post', async ({ page }) => {
+test('blog index reaches a published post', { tag: '@smoke' }, async ({ page }) => {
     await page.goto('/blog');
 
     const post = page.getByRole('link', { name: /Static sites on AWS without click-ops/ }).first();
