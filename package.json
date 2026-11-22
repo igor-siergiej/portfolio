@@ -59,7 +59,7 @@
     "@astrojs/check": "^0.9.10",
     "@commitlint/cli": "^21.2.1",
     "@commitlint/config-conventional": "^21.2.0",
-    "@imapps/oxc-config": "7.0.1",
+    "@imapps/oxc-config": "9.0.0",
     "@oxlint/plugins": "1.94.0",
     "@playwright/test": "^1.62.0",
     "@semantic-release/changelog": "^7.0.0",

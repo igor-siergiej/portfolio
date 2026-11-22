@@ -31,7 +31,7 @@
         "@astrojs/check": "^0.9.10",
         "@commitlint/cli": "^21.2.1",
         "@commitlint/config-conventional": "^21.2.0",
-        "@imapps/oxc-config": "7.0.1",
+        "@imapps/oxc-config": "9.0.0",
         "@oxlint/plugins": "1.94.0",
         "@playwright/test": "^1.62.0",
         "@semantic-release/changelog": "^7.0.0",
@@ -271,7 +271,7 @@
 
     "@hono/node-server": ["@hono/node-server@1.19.15", "", { "peerDependencies": { "hono": "^4" } }, "sha512-Za2ai6TLdKjUvnur+eenO6nuYYipVAEhyCAdaV8IRvmU9kK8crOZUSYvIXn72E4f8fJqyAbpcJuTsYYmZp9Deg=="],
 
-    "@imapps/oxc-config": ["@imapps/oxc-config@7.0.1", "", { "peerDependencies": { "@oxlint/plugins": ">=1.90.0 <2", "oxfmt": ">=0.75.0 <1", "oxlint": ">=1.90.0 <2" } }, "sha512-l7FBg1R7S9rYHBAg2iJH/ZyGjeOOjrXtYSeMr/3BCMD1JVn+H5BzO2FwmgGuYWzGETHD8gvLPwNkluEdr0Rs3A=="],
+    "@imapps/oxc-config": ["@imapps/oxc-config@9.0.0", "", { "peerDependencies": { "@oxlint/plugins": ">=1.90.0 <2", "oxfmt": ">=0.75.0 <1", "oxlint": ">=1.90.0 <2" } }, "sha512-L1kTuXX1hdm82+hFTO3jT6s8m2AF+nztyePzo1GIgPaf2gyHcywDmsYM80HYKPtL4StXsAZVSpipqXdjGHYj0A=="],
 
     "@img/colour": ["@img/colour@1.1.0", "", {}, "sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ=="],
 

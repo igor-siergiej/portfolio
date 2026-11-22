@@ -53,7 +53,7 @@ bun run test:e2e      # playwright
 
 `oxlint.config.mts` and `oxfmt.config.mts` consume the published
 `@imapps/oxc-config/oxlint` and `@imapps/oxc-config/oxfmt` presets, including the
-shared anti-slop plugin. The installed release is **7.0.1**, with **Oxlint 1.94.0**,
+shared anti-slop plugin. The installed release is **9.0.0**, with **Oxlint 1.94.0**,
 **@oxlint/plugins 1.94.0** and **Oxfmt 0.79.0** exact-pinned in `package.json`.
 Those versions satisfy the published package's peer ranges:
 `oxlint` / `@oxlint/plugins >=1.90.0 <2`, `oxfmt >=0.75.0 <1`. When upgrading,

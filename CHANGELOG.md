@@ -1,6 +1,6 @@
 ## Tooling: Biome replaced by shared Oxlint and Oxfmt (2026-11-22)
 
-- Linting and formatting now use the shared `@imapps/oxc-config` **7.0.1** presets
+- Linting and formatting now use the shared `@imapps/oxc-config` **9.0.0** presets
   (`/oxlint`, `/oxfmt`, including the anti-slop plugin) with Oxlint 1.94.0,
   @oxlint/plugins 1.94.0 and Oxfmt 0.79.0. `@biomejs/biome` and `biome.json` are removed.
 - Commands: `bun run lint` (read-only lint + format check), `bun run lint:fix`
